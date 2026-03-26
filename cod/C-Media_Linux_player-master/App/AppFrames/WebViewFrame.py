@@ -1,0 +1,188 @@
+# Librerías de GUI
+from PySide6.QtCore import *
+from PySide6.QtWidgets import *
+from PySide6.QtGui import *
+
+
+# Librerías Navegador Web
+from PySide6.QtWebEngineCore import QWebEnginePage,QWebEngineSettings
+from PySide6.QtWebEngineWidgets import QWebEngineView
+from PySide6.QtWebChannel import QWebChannel
+
+
+from pynput.mouse import Button, Controller
+
+import logging
+
+# Clases externas
+from .JSBridge import JSBridge
+from .NavBar import NavigationBar
+from .Controllers.NetworkController import NetworkController
+from .Controllers.SpeechSynthesis import SpeechSynthesis
+from .Controllers.LocalMedia import LocalMedia
+from .Controllers.CredentialManager import CredentialManager
+from .Controllers.SystemInfo import SystemInfo
+import sys
+import logging
+import os
+from PySide6.QtNetwork import QSslCertificate, QSslSocket, QSslConfiguration
+
+
+class WebPage(QWebEnginePage):
+    """
+    Clase que sobre escribe la clase QWebEnginePage, base para instanciar una pagina web
+    """
+
+    def javaScriptConsoleMessage(self, level, message, lineNumber, sourceID):
+        """
+        Sobreescribe el mensaje de la consola de JavaScript, para imprimirlo en la consola
+        :param level: int. nivel del mensaje
+        :param message: str. mensaje
+        :param lineNumber: int. numero de linea
+        :param sourceID: str. id de la fuente
+        """
+        log = f"JS Console: {message}"
+        #print(log)
+
+    @Slot(str)
+    def ejecutarJavaScript(self, script):
+        """
+        Ejecuta un script de JavaScript en la página web
+        :param script: str. script a ejecutar
+        """
+        self.runJavaScript(script)
+
+
+
+
+class WebViewFrame(QWidget):
+    """
+    Clase del Frame del contenedor Web
+    :param settings: dic. Configuración del navegador
+    """
+    def __init__(self, settings):
+        """
+        Clase del Frame del contenedor Web
+        :param settings: dic. Configuración del navegador
+        """
+        super().__init__()
+
+        #Set Layout
+        self.mainLayout = QGridLayout()
+        self.mainLayout.setContentsMargins(0, 0, 0, 0)
+        self.setLayout(self.mainLayout)
+        
+        #Creación del contenedor
+        self.view = QWebEngineView(self)
+        self.view.setContextMenuPolicy(Qt.NoContextMenu)
+        self.view.setPage(WebPage(self.view))
+        self.nav_bar = None
+        
+        #Eliminar para producción
+        self.view.page().certificateError.connect(self.on_cert_error)
+        #Eliminar para producción
+
+
+        self.loaded = False
+        self.view.settings().setAttribute(QWebEngineSettings.FullScreenSupportEnabled, True)
+        self.grabGesture(Qt.PinchGesture, Qt.DontStartGestureOnChildren)
+        #Configuración
+        self.settings = settings
+        
+        # Barra de Navegación 
+        if self.settings.get("MostrarBarraNavegacion", False):
+            self.nav_bar = NavigationBar(self.view.page())
+            self.mainLayout.addWidget(self.nav_bar, 0, 0)
+
+        self.mainLayout.addWidget(self.view, 1, 0)
+        self.view.setUrl(QUrl(self.settings["UrlInicio"]))
+        
+        self.channel = QWebChannel(self.view.page())
+        self.view.loadFinished.connect(self.on_load_finished)
+
+    #Eliminar para producción
+    def on_cert_error(self, e):
+       print("Error en el certificado")
+       e.acceptCertificate()
+    #Eliminar para producción
+    
+
+    #Añadir para producción
+    """
+    def on_cert_error(self, e):
+       print(f"Error SSL: {e.errorDescription()} en {e.url().toString()}")
+       return False"""
+    
+    #Añadir para producción
+
+
+    def showEvent(self, e):
+        if self.loaded:
+            for api in list(self.apis.values()):
+                api.get_event().loaded()
+        else:
+            self.loaded = True
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_F5:
+            self.view.setUrl(QUrl(self.settings["UrlInicio"]))
+        event.accept()
+    def on_load_finished(self, ok):
+        """
+        Evento de finalización del estado de carga
+        Carga las apis al contenedor y cambia la url de la barra de navegación
+        """
+        for api in list(self.apis.values()):
+            api.get_event().set_page(self.view.page())
+            
+        self.load_apis()
+        if self.nav_bar:
+            # Utilizamos toString() para obtener la URL
+            self.nav_bar.set_url(self.view.page().url().toString())
+        
+        if self.loaded:
+            for api in list(self.apis.values()):
+                api.get_event().loaded()
+        else:
+            self.loaded = True
+
+        # Simulación de clic; evalúa si es necesario en producción
+        m = Controller()
+        m.click(Button.left, 1)
+    def load_apis(self):
+        """
+        Carga las APIs al contenedor web
+        """
+        api = self.apis
+        
+        self.js_bridge = JSBridge(self.view.page(), api)
+        
+        self.view.page().setWebChannel(self.channel)
+        qwebchannel_js = QFile("://qtwebchannel/qwebchannel.js")
+        if qwebchannel_js.open(QFile.ReadOnly):
+            source = qwebchannel_js.readAll().data().decode('utf-8')
+            self.view.page().runJavaScript(source)
+            self.channel.registerObject('external', self.js_bridge)
+            self.channel.registerObject('speech', self.apis["speech"])
+            self.channel.registerObject('local_media', self.apis['local_media'])
+            self.channel.registerObject('credential_manager', self.apis['credential_manager'])
+            self.channel.registerObject('system_info', self.apis['system_info'])
+            qwebchannel_js.close()
+        else:
+            logging.error("No se pudo abrir qwebchannel.js")
+            
+        self.view.page().runJavaScript(self.js_bridge.parse_api_js())
+
+    def set_apis(self, apis):
+        """
+        Establece las APIs en la clase
+        :param apis: dict. APIs
+        """
+        self.apis = apis
+        self.apis["speech"] = SpeechSynthesis()
+        self.apis['local_media'] = LocalMedia()
+        self.apis['system_info'] = SystemInfo()
+        self.apis['credential_manager'] = CredentialManager()
+        self.apis["network"] = NetworkController(self.settings["UrlInicio"], self.view, self.apis["speech"])
+
+    def close_speech_synth(self):
+        self.apis["speech"].close_thread()
