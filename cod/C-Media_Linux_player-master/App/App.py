@@ -30,7 +30,7 @@ else:
 logging.basicConfig(filename=os.path.expanduser('~')+"/.config/Ciel/C-Media_Player/logs/log.log", level=logging.DEBUG, format=("%(asctime)s:%(levelname)s:%(message)s"), datefmt="%m/%d/%Y %I:%M:%S %p")
 
 # Descomentarear la siguiente linea, para activar el modo de depuracion, que es accesible desde el navegador: http://localhost:9222
-# os.environ["QTWEBENGINE_REMOTE_DEBUGGING"] = "9222"
+os.environ["QTWEBENGINE_REMOTE_DEBUGGING"] = "9222"
 
 #Creacion aplicacion
 os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--disable-pinch"

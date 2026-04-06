@@ -7,6 +7,9 @@ import math #Libreria de matematicas
 import cv2 #Libreria de manipulacion de imagenes
 from ...Event import Event
 
+
+print("Usando LogicControls.py")
+
 class Printer():
 
     """

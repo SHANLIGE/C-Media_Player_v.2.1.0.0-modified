@@ -3,9 +3,17 @@
 from App.AppFrames.Controllers.Printers import NCR7197
 from App.AppFrames.Controllers.Printers import TM_T88V
 
+
+
+
+
 def main():
     #printer_1 = NCR7197.Printer({"NombrePuerto": "USB"})
-    printer_2 = TM_T88V.Printer({"NombrePuerto":"USB"})
+    printer_2 = TM_T88V.Printer({"NombrePuerto": "/dev/ttyUSB0",
+    "Baudios": 9600,
+    "Paridad": "N",
+    "BitsParada": 1,
+    "BitsDatos": 8})
     
     a = (b"\x1Dd\x05")
 
@@ -34,8 +42,9 @@ def main():
         b"Linea1\n\nLinea2\n"+
         b""+
         b"\x1b\x0c\x1dV\x01")
-    #printer_1.imprimir("Linea1\nLinea2\nLinea3\nLinea4\nlinea5\nlinea6") #,"/home/luis/Descargas/logo_ciel.bmp"
-    #printer_1.printer.write(a_1)
+    #printer_2.imprimir("Linea1\nLinea2\nLinea3\nLinea4\nlinea5\nlinea6") #,"/home/luis/Descargas/logo_ciel.bmp"
+    
+    printer_2.imprimir("PruebaTurno\nLinea1\nLinea2")
     printer_2.printer.write(a_2)
 
 

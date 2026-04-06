@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Thermal Test Ticket</title>
+<style>
+body {
+  font-family: monospace;
+  width: 280px; /* ideal para 80mm */
+  margin: 0 auto;
+}
+
+.ticket {
+  width: 100%;
+}
+
+.center {
+  text-align: center;
+}
+
+.line {
+  display: flex;
+  justify-content: space-between;
+}
+
+button {
+  display: block;
+  margin: 20px auto;
+  padding: 10px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+@media print {
+  body {
+    width: 280px;
+    margin: 0;
+  }
+
+  button {
+    display: none;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="ticket">
+  <div class="center">
+    <h3>TEST STORE</h3>
+    <p>------------------------------</p>
+  </div>
+
+  <div class="line"><span>Item 1</span><span>$10.00</span></div>
+  <div class="line"><span>Item 2</span><span>$20.00</span></div>
+
+  <p>------------------------------</p>
+
+  <div class="line"><strong>Total</strong><strong>$30.00</strong></div>
+
+  <p>------------------------------</p>
+
+  <p class="center">Gracias por su compra</p>
+</div>
+
+<button onclick="printTicket()">Imprimir Ticket</button>
+
+<script>
+function printTicket() {
+  window.print();
+}
+</script>
+
+</body>
+</html>

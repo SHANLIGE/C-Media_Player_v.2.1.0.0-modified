@@ -1,22 +1,106 @@
-import serial #libreria que permite la conexion con puerto serial
+
+import serial
+import serial.tools.list_ports
+import logging
+
+class SerialConnection():
+    """
+    Clase para conexión a dispositivos por puerto serial.
+    """
+    def __init__(self, port, timeout=2, baudrate=9600, bytesize=8, parity='N', stopbits=1):
+        self.port = port
+        self.baudrate = baudrate
+        self.timeout = timeout
+
+        # Convierte a valores pyserial
+        self.bytesize = {
+            5: serial.FIVEBITS,
+            6: serial.SIXBITS,
+            7: serial.SEVENBITS,
+            8: serial.EIGHTBITS
+        }.get(bytesize, serial.EIGHTBITS)
+
+        self.parity = {
+            'N': serial.PARITY_NONE,
+            'E': serial.PARITY_EVEN,
+            'O': serial.PARITY_ODD,
+            'M': serial.PARITY_MARK,
+            'S': serial.PARITY_SPACE
+        }.get(parity, serial.PARITY_NONE)
+
+        self.stopbits = {
+            1: serial.STOPBITS_ONE,
+            1.5: serial.STOPBITS_ONE_POINT_FIVE,
+            2: serial.STOPBITS_TWO
+        }.get(stopbits, serial.STOPBITS_ONE)
+
+        self.device = None
+
+        self.connect()
+
+    def connect(self):
+        try:
+            if "/dev/" not in self.port:
+                # Buscar puerto por hwid
+                ports = serial.tools.list_ports.comports()
+                for port, desc, hwid in sorted(ports):
+                    if self.port in hwid:
+                        self.port = port
+            self.device = serial.Serial(
+                port=self.port,
+                baudrate=self.baudrate,
+                bytesize=self.bytesize,
+                parity=self.parity,
+                stopbits=self.stopbits,
+                timeout=self.timeout
+            )
+            print("Serial conectado correctamente:", self.device)
+        except Exception as e:
+            self.device = None
+            logging.error("Error abriendo serial: " + str(e))
+            print("Error abriendo serial:", e)
+
+    def write(self, data):
+        if self.device:
+            try:
+                self.device.write(data)
+            except Exception as e:
+                logging.error(str(e))
+                print("Error escribiendo:", e)
+
+    def read(self):
+        if self.device:
+            try:
+                return self.device.read()
+            except Exception as e:
+                logging.error(str(e))
+                return None
+
+    def readline(self):
+        if self.device:
+            try:
+                return self.device.readline()
+            except Exception as e:
+                logging.error(str(e))
+                return None
+
+    def disconnect(self):
+        if self.device:
+            try:
+                self.device.close()
+                self.device = None
+            except Exception as e:
+                logging.error(str(e))
+
+"""import serial #libreria que permite la conexion con puerto serial
 import logging #libreria de logging
 from serial.serialutil import PARITY_NAMES #Libreria con los nombres de paridad
 import serial.tools.list_ports
 
 class SerialConnection():
-    """
-    clase de coneccion a los dispositivos conectados por puerto serial.
-    :param port: string. Ubicacion del archivo del puerto
-    :param timeout: int. Opcional. Limite de tiempo.
-    :param baudrate: tasa de baudios.
-    """
+   
     def __init__(self, port, timeout = 2000, baudrate = 9600, bytesize=8, parity=0,stopbits = 1 ):
-        """
-        La funcion es el constructor de la clase UsbConnection.
-        :param port: string. Ubicacion del archivo del puerto
-        :param timeout: int. Opcional. Limite de tiempo.
-        :param baudrate: tasa de baudios.
-        """
+        
         self.port = port
         self.baudrate = baudrate
         self.bytesize = bytesize
@@ -31,10 +115,7 @@ class SerialConnection():
 
 
     def connect(self):
-        """
-        La funcion realiza la coneccion del objeto con el dispositivo mediante el puerto USB
-        :return: str. Error
-        """
+        
         try:
             if "/dev/" not in self.port:
                 ports = serial.tools.list_ports.comports()
@@ -48,10 +129,7 @@ class SerialConnection():
             #raise str(e)
 
     def write(self, data):
-        """
-        La funcion escribe un conjunto de bytes en el puerto USB.
-        :param data: bytearray. Conjunto de bytes a escribir en el puertp USB.
-        """
+        
         if self.device:
             try:
                 self.device.write(data)
@@ -60,10 +138,7 @@ class SerialConnection():
                 return str(e)
 
     def read(self):
-        """
-        La funcion lee una cantidad de bytes del puerto USB.
-        :return: array. Conjunto de bytes con informacion leidos en el puerto USB. 
-        """
+        
         if self.device:
             try:
                 return self.device.read()
@@ -72,10 +147,7 @@ class SerialConnection():
                 return str(e)
 
     def read_line(self):
-        """
-        La funcion lee una cantidad de bytes del puerto USB.
-        :return: array. Conjunto de bytes con informacion leidos en el puerto USB. 
-        """
+        
         if self.device:
             try:
                 return self.device.readline()
@@ -84,12 +156,11 @@ class SerialConnection():
                 return str(e)
 
     def diconnect(self):
-        """
-        La funcion cierra la conexion con el puerto serial
-        """
+       
         if self.device:
             try:
                 self.device.close()
             except Exception as e:
                 logging.error(str(e))
                 return str(e)
+"""

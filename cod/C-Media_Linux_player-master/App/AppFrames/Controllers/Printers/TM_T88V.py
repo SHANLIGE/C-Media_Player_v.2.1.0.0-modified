@@ -7,6 +7,9 @@ import math #Libreria de matematicas
 import cv2 #Libreria de manipulacion de imagenes
 from ...Event import Event
 
+
+print("Usando TM_T88V.py")
+
 class Printer():
 
     """
@@ -30,6 +33,9 @@ class Printer():
             self.printer = UsbConnection(0x04b8, 0x0202)
         else:
             self.printer = SerialConnection(device["NombrePuerto"],baudrate=device["Baudios"], parity=device["Paridad"], stopbits=device["BitsParada"], bytesize=device["BitsDatos"]) #/dev/ttyUSB0 para puerto serial usb 0
+        
+        print("Printer creado:", self.printer)
+        print("Device:", getattr(self.printer, "device", None))
 
 
         if self.printer.device is None:
@@ -39,10 +45,14 @@ class Printer():
         self.detalle = "Manejo de puerto USB o puerto serial segun selección"
         self.__cambios[self.__version] = self.detalle
 
+        
+
     def getPrinter(self):
         return self.printer
 
     def get_event(self):
+
+        
         return self.event
 
     def clear_event(self):
@@ -73,6 +83,11 @@ class Printer():
     #Metodos Impresora
     def imprimir(self, lineas, logo=None):
 
+        print("Entrando a imprimir")
+
+        with open("/tmp/test_print.log", "a") as log_file:
+            log_file.write("Entrando a imprimir\n")
+            
         """
         Imprime un Ticket
         :param lineas: str. lineas de impresion separadas por un salto de linea '\\n'
@@ -81,6 +96,10 @@ class Printer():
         """
 
         Tx = bytearray()
+
+        if self.printer is None:
+            raise Exception("Impresora no inicializada o no encontrada")
+
         if logo:
             Tx += self.Logo(logo)
         
@@ -356,7 +375,7 @@ class Printer():
                     else:
                         tx += bytearray([0x1B, 0x57, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xBE, 0x02]) # seleccionar area de impresion
                 
-                # Llegan menos de 13 líneas
+                # Llegan menos de 13 líneasCami
                 else:
                     tx += bytearray([0x1B, 0x57, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xBE, 0x02]) # seleccionar area de impresion
         else:

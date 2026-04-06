@@ -12,6 +12,7 @@ class PrinterTabFrame(QWidget):
         self.setEnabled(False)
         self.path = ""
         self.get_settings()
+    
 
 
         #Seleccionar el fondo
@@ -59,6 +60,18 @@ class PrinterTabFrame(QWidget):
         img.setPixmap(pixmap)
 
         self.mainLayout.addWidget(img, 2, 5, 1, 1, Qt.AlignRight | Qt.AlignBottom)
+
+    try:
+            print("Probando impresion")
+
+            if self.printer:
+                self.printer.imprimir("Test APP\nImpresion ok \n123")
+            
+            else:
+                print("printer es none")
+
+    except Exception as e:
+            print("Error en test print:", e)
 
 
     def get_settings(self):
