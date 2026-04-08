@@ -37,6 +37,9 @@ El reproductor utiliza el control navegador de C-Media a traves del cual se acce
 - SOLID
 - POO
 - Abstracción (Interfaces)
+  
+### Arquitectura
+ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked, interpreter
 
 
 
