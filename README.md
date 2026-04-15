@@ -55,3 +55,19 @@ ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked, interpr
 - Ejecutar configuración `App.py -- debug --config`
 - Ejecutar Player  `App.py -- debug`
 
+
+## Crear copia del repositorio con nuevo nombre
+
+### Copia local
+
+```bash
+./scripts/crear_copia_engine.sh
+```
+
+### Publicar en GitHub
+
+```bash
+GITHUB_TOKEN=tu_token ./scripts/crear_copia_engine.sh --github TU_USUARIO_O_ORG
+```
+
+Esto crea (si no existe) y publica el repositorio privado `C-Media_Player_Engine` en GitHub con todo el historial.
