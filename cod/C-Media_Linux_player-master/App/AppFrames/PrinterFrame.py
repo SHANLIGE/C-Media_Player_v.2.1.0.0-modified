@@ -42,12 +42,15 @@ class PrinterFrame(QWidget):
                 if impresora["value"] == settings["TipoImpresora"]:
                     self.printer = impresora["import"](settings) 
                     break
+            if isinstance(self.printer, FallbackPrinter):
+                logging.error("No existe controlador para la impresora seleccionada")
         except Exception as e:
             print(e)
             logging.error ("No existe controlador para la impresora seleccionada")
         
         
-        if self.printer.printer and os.path.exists (settings["RutaLogo"]["Path"]):
+        """if self.printer.printer and os.path.exists (settings["RutaLogo"]["Path"]):"""
+        if hasattr(self.printer, "printer") and self.printer.printer and os.path.exists(settings["RutaLogo"]["Path"]):
             self.printer.cargar (settings["RutaLogo"]["Path"])
         super().__init__()
         
