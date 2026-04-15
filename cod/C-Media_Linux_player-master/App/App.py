@@ -27,8 +27,15 @@ else:
 
 
 #Creacion del archivo de logs
-logging.basicConfig(filename=os.path.expanduser('~')+"/.config/Ciel/C-Media_Player/logs/log.log", level=logging.DEBUG, format=("%(asctime)s:%(levelname)s:%(message)s"), datefmt="%m/%d/%Y %I:%M:%S %p")
-
+"""logging.basicConfig(filename=os.path.expanduser('~')+"/.config/Ciel/C-Media_Player/logs/log.log", level=logging.DEBUG, format=("%(asctime)s:%(levelname)s:%(message)s"), datefmt="%m/%d/%Y %I:%M:%S %p")"""
+log_dir = os.path.expanduser('~') + "/.config/Ciel/C-Media_Player/logs"
+os.makedirs(log_dir, exist_ok=True)
+logging.basicConfig(
+    filename=log_dir + "/log.log",
+    level=logging.DEBUG,
+    format=("%(asctime)s:%(levelname)s:%(message)s"),
+    datefmt="%m/%d/%Y %I:%M:%S %p"
+)
 # Descomentarear la siguiente linea, para activar el modo de depuracion, que es accesible desde el navegador: http://localhost:9222
 os.environ["QTWEBENGINE_REMOTE_DEBUGGING"] = "9222"
 
