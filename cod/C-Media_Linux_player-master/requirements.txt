@@ -14,6 +14,7 @@ opencv-python>=4.9.0
 packaging==24.1
 psutil==5.9.8
 pycparser==2.22
+PySide6==6.6.1
 pynput==1.7.6
 PyRect==0.2.0
 pyserial==3.5
