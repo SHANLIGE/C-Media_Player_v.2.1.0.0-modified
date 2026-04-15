@@ -12,11 +12,22 @@ from .Controllers.Printers.Printers import get_impresoras
 
 print("Tomando impresora")
 
+class FallbackPrinter:
+    """
+    Implementación de respaldo para exponer la API `imprimir` aunque el
+    controlador real no haya podido inicializarse.
+    """
+
+    def imprimir(self, *_args, **_kwargs):
+        raise Exception("La impresora no está inicializada o no fue configurada correctamente")
+
 class PrinterFrame(QWidget):
     """
     Clase de Frame de la impresora
     :param settings: Configuracion de la impresora
     """
+    
+    
     def __init__(self, settings):
     
         """
@@ -24,7 +35,8 @@ class PrinterFrame(QWidget):
         :param settings: Configuracion de la impresora
         """
         impresoras = get_impresoras()
-        self.printer = None 
+        """self.printer = None"""
+        self.printer = FallbackPrinter()
         try:
             for impresora in impresoras.values():
                 if impresora["value"] == settings["TipoImpresora"]:
