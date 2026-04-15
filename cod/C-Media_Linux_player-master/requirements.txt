@@ -17,9 +17,6 @@ pycparser==2.22
 pynput==1.7.6
 PyRect==0.2.0
 pyserial==3.5
-from PySide6.QtCore import *
-from PySide6.QtWidgets import *
-from PySide6.QtGui import *
 pyusb==1.2.1
 PyYAML==6.0
 requests==2.31.0
