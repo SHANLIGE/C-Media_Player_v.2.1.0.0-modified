@@ -88,6 +88,7 @@ class JSBridge(QtCore.QObject):
             for controller, methods in functions.items():
                 method = [{"func": name, "params":params} for name, params in methods.items()]
                 funs.append({"controller": controller, "methods":method})
+				#Se modificó y actualizó la conexión con los eventos en el servidor
             js = """window.api = {
                         _createApi: function(controllerList){
                         for(var i = 0; i < controllerList.length; i++){
