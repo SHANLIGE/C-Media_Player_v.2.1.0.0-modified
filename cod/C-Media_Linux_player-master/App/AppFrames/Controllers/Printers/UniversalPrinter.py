@@ -144,6 +144,7 @@ class Printer():
 
             if hasattr(self.printer, "write"):
                 self.printer.write(tx)
+                
 
                 # fuerza envío inmediato si existe flush
                 if hasattr(self.printer, "flush"):
