@@ -4,6 +4,7 @@ import threading
 import logging
 from ...Event import Event
 
+
 class BarCodeReader():
     """
     Clase de lector de codigo de barras NewlandFM430 con conexion mediante puerto serial.
@@ -146,16 +147,84 @@ class BarCodeReader():
         elif(prefix != 114):
             try:
                 res = ""
-                #print(byte)
                 for elem in byte:
                     if elem <=32 or elem >= 126:
                         return
                     res += chr(elem)
-                    
+                
                 result = res
-                #print(result)
+
+                # 🔹 evento original (lo puedes dejar)
                 self.event.awake("EstablecerCodigo", [json.dumps(result)])
+
+                # AUTOMATIZACIÓN
+                js = f"""
+                console.log("INICIANDO AUTO TURNO");
+
+                function flujoTurno() {{
+
+                    // 1️⃣ Buscar botón CONTINUAR
+                    let continuar = [...document.querySelectorAll('button')]
+                        .find(b => b.innerText.toLowerCase().includes('continuar'));
+
+                    if(continuar) {{
+                        console.log("➡️ Click en CONTINUAR");
+                        continuar.click();
+                        setTimeout(flujoTurno, 500);
+                        return;
+                    }}
+
+                    // 2️⃣ Buscar botón CÉDULA DE CIUDADANÍA
+                    let cedulaBtn = [...document.querySelectorAll('button')]
+                        .find(b => b.innerText.toLowerCase().includes('cédula'));
+
+                    if(cedulaBtn) {{
+                        console.log("➡️ Seleccionando tipo documento");
+                        cedulaBtn.click();
+                        setTimeout(flujoTurno, 500);
+                        return;
+                    }}
+
+                    // 3️⃣ Buscar input
+                    let input = document.querySelector('input');
+
+                    if(input) {{
+                        console.log("➡️ Escribiendo cédula");
+
+                        input.focus();
+                        input.value = "{result}";
+
+                        input.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                        input.dispatchEvent(new Event('change', {{ bubbles: true }}));
+
+                        // ENTER
+                        let event = new KeyboardEvent('keydown', {{
+                            key: 'Enter',
+                            keyCode: 13,
+                            which: 13,
+                            bubbles: true
+                        }});
+
+                        input.dispatchEvent(event);
+
+                        console.log("TURNO ENVIADO");
+                        return;
+                    }}
+
+                    // seguir intentando
+                    setTimeout(flujoTurno, 500);
+                }}
+
+                flujoTurno();
+                """
+                print("ENVIANDO JS AL NAVEGADOR")
+                self.event.awake_js(js)
+                
+
                 return result
+            
+
+
             except:
                 return
         else:

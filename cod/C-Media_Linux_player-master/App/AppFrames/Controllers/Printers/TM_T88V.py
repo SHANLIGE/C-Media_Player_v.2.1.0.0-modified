@@ -7,6 +7,7 @@ import math #Libreria de matematicas
 import cv2 #Libreria de manipulacion de imagenes
 from ...Event import Event
 
+
 class Printer():
 
     """
@@ -24,20 +25,41 @@ class Printer():
         self.__cambios = {}
         self.__version = None
         self.event = Event("Impresion")
+        self.device = device  
 
-            
-        if device ["NombrePuerto"] == "USB":
-            self.printer = UsbConnection(0x04b8, 0x0202)
-        else:
-            self.printer = SerialConnection(device["NombrePuerto"],baudrate=device["Baudios"], parity=device["Paridad"], stopbits=device["BitsParada"], bytesize=device["BitsDatos"]) #/dev/ttyUSB0 para puerto serial usb 0
+  
+        self.printer = None
+        print("DEVICE:", device, type(device))
+        print("USB OBJ:", getattr(self, "printer", None))
+        print("HAS DEVICE ATTR:", hasattr(self, "printer") and hasattr(self.printer, "device"))
 
+        #Extraer configuración real
+        config = device.get("PuertoSerial", {})
 
-        if self.printer.device is None:
-            self.printer = None
+       
+        try:
+            if config.get("NombrePuerto") == "/dev/ttyUSB0":
+                    self.printer = UsbConnection(0x0403, 0x6001)
+            else:
+                    self.printer = SerialConnection(
+                        "/dev/ttyUSB0",
+                        baudrate=config.get("Baudios", 9600),
+                        parity=config.get("Paridad", "N"),
+                        stopbits=config.get("BitsParada", 1),
+                        bytesize=config.get("BitsDatos", 8)
+                    )
+        except Exception as e:
+                print("Error inicializando impresora:", e)
+                self.printer = None
+
+        if self.printer is None:
             self.event.awake("NotificarError", [json.dumps("Impresora No Encontrada")])
+
         #Constructor
         self.detalle = "Manejo de puerto USB o puerto serial segun selección"
         self.__cambios[self.__version] = self.detalle
+        
+        
 
     def getPrinter(self):
         return self.printer
@@ -72,21 +94,72 @@ class Printer():
     
     #Metodos Impresora
     def imprimir(self, lineas, logo=None):
-
         """
         Imprime un Ticket
-        :param lineas: str. lineas de impresion separadas por un salto de linea '\\n'
-        :param logo: str. opc. ubicacion del logo en formato .bmp
-        :return: bytearray. Arreglo de bits con la informacion del ticket 
+        :param lineas: dict o str. Datos de impresión o texto plano
+        :param logo: str. opc. ubicación del logo en formato .bmp
         """
 
-        Tx = bytearray()
-        if logo:
-            Tx += self.Logo(logo)
-        
-        Tx += self.Ticket(lineas.split('\n'))
-        self.printer.write(Tx)
-        return Tx
+        # Seguridad: validar impresora
+        if not self.printer:
+            print("No hay impresora física inicializada")
+            return
+
+        try:
+            print("Generando ticket ESC/POS...")
+
+            texto = ""
+
+            if isinstance(lineas, dict):
+                texto = lineas.get("Texto", {}).get("Texto", "")
+            else:
+                texto = str(lineas)
+
+            lineas_lista = texto.split("\n")
+
+            while len(lineas_lista) < 15:
+                lineas_lista.append("")
+
+            tx = self.Ticket([
+                lineas_lista[0],
+                lineas_lista[1],
+                lineas_lista[2],
+                lineas_lista[3],
+                lineas_lista[4],
+                lineas_lista[5],
+                lineas_lista[6],
+                lineas_lista[7],
+                lineas_lista[8],
+                lineas_lista[9],
+                lineas_lista[10],
+                lineas_lista[11],
+                lineas_lista[12],
+                lineas_lista[13],
+                lineas_lista[14],
+            ])
+
+            # =========================
+            # FIX CRÍTICO DE IMPRESIÓN
+            # =========================
+
+            if hasattr(self.printer, "write"):
+                self.printer.write(tx)
+
+                # fuerza envío inmediato si existe flush
+                if hasattr(self.printer, "flush"):
+                    self.printer.flush()
+
+                # pequeño delay para hardware real ESC/POS
+                time.sleep(0.3)
+
+                print("TICKET ENVIADO A IMPRESORA FÍSICA")
+
+            else:
+                raise Exception("Driver de impresora inválido")
+
+        except Exception as e:
+            print("Error imprimiendo ticket:", e)
+            self.event.awake("NotificarError", [json.dumps(str(e))])    
 
     
     def get_paper(self):     
@@ -95,7 +168,7 @@ class Printer():
         Retorna el estado del papel de la impresora
         :return: dic. estado del papel de la impresora
         """
-         
+    
         self.printer.write(b'\x1B\x76') #GS V       
         time.sleep(0.2)
         paper_state = self.printer.read()
@@ -163,6 +236,7 @@ class Printer():
         :return: bytearray. informacion del logo
         """
         
+   
         Tx = self.Logo(logo)
         self.printer.write(Tx) 
         return Tx

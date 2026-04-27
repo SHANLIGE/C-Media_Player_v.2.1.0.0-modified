@@ -88,6 +88,7 @@ class JSBridge(QtCore.QObject):
             for controller, methods in functions.items():
                 method = [{"func": name, "params":params} for name, params in methods.items()]
                 funs.append({"controller": controller, "methods":method})
+                print("Puente activado")
             js = """window.api = {
                         _createApi: function(controllerList){
                         for(var i = 0; i < controllerList.length; i++){
@@ -112,11 +113,30 @@ class JSBridge(QtCore.QObject):
                         };
                     },
                 _bridge:{
-                        call: function (funcName, controller , params, id){
-                            
+                        _channel: null,
+                        _queue: [],
+                        _ready: false,
+                        _init: function(){
+                            if(window.api._bridge._ready) return;
                             new QWebChannel(qt.webChannelTransport, function(channel) {
-        	                    channel.objects.external.call(funcName, controller,JSON.stringify(params), id);
-	 	                    });
+                                window.api._bridge._channel = channel;
+                                window.api._bridge._ready = true;
+                                window.speak_func = channel.objects.speech ? channel.objects.speech.start : null;
+                                var q = window.api._bridge._queue;
+                                window.api._bridge._queue = [];
+                                for(var i=0;i<q.length;i++) q[i](channel);
+                            });
+                        },
+                        call: function (funcName, controller, params, id){
+                            var doCall = function(channel){
+                                channel.objects.external.call(funcName, controller, JSON.stringify(params), id);
+                            };
+                            if(window.api._bridge._ready){
+                                doCall(window.api._bridge._channel);
+                            } else {
+                                window.api._bridge._queue.push(doCall);
+                                window.api._bridge._init();
+                            }
                         }
                     },
                 _checkValue: function(funcName, controller, resolve, reject, id){
@@ -143,6 +163,15 @@ class JSBridge(QtCore.QObject):
                     returnValues: {}
             }
 	    window.api._createApi(%s);
+
+          window.external = {
+    lanzarMensaje: function(msg){
+        console.log("external funcionando");
+        console.log("MSG:", msg);
+        window.api.printer.imprimir(msg);
+    }
+};
+    
         function updateOnlineStatus () {
             if(navigator.onLine){
                 window.api.network.connected()
@@ -151,20 +180,18 @@ class JSBridge(QtCore.QObject):
             }
         }
 
-        new QWebChannel(qt.webChannelTransport, function(channel) {
-            window.speak_func = channel.objects.speech.start;
-        });
-
-
-        window.addEventListener('online', updateOnlineStatus)
-        window.addEventListener('offline', updateOnlineStatus)
+        window.addEventListener('online', updateOnlineStatus);
+        window.addEventListener('offline', updateOnlineStatus);
         window.speechSynthesis = window.api.speech;
+        window.api._bridge._init();
+
      	var queue = [];        
         window.speechSynthesis.speak = function(speech){
         	queue.push(speech);
   	        window.speak_func(queue)
         };
         
+                
         window.speechSynthesis.cancel = function(){
         	queue = [];
         	window.api.speech.cancel_speech();
@@ -180,11 +207,12 @@ class JSBridge(QtCore.QObject):
         }
         
 	var text = "JSBridge";
+    alert(text + " cargado");
 
             """
+            print("Generando funciones para el puente JSBridge")
             return js % funs
         return generate_func()
-
 
     
         

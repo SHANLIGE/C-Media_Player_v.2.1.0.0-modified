@@ -10,7 +10,7 @@ class SerialConnection():
     :param timeout: int. Opcional. Limite de tiempo.
     :param baudrate: tasa de baudios.
     """
-    def __init__(self, port, timeout = 2000, baudrate = 9600, bytesize=8, parity=0,stopbits = 1 ):
+    def __init__(self, port, timeout = 2, baudrate = 9600, bytesize=8, parity=0,stopbits = 1 ):
         """
         La funcion es el constructor de la clase UsbConnection.
         :param port: string. Ubicacion del archivo del puerto
@@ -83,7 +83,7 @@ class SerialConnection():
                 logging.error(str(e))
                 return str(e)
 
-    def diconnect(self):
+    def disconnect(self):
         """
         La funcion cierra la conexion con el puerto serial
         """

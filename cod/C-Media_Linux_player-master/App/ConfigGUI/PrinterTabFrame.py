@@ -36,7 +36,7 @@ class PrinterTabFrame(QWidget):
         self.file_name_button.setStyleSheet("background-color : rgb(88, 102, 108); padding: 6px; border-radius: 3px;color: white")
 
         #Fila2
-        self.printers = ["TM-T88", "SAT"]
+        self.printers = ["TM-T88", "SAT", "UniversalPrinter"]
         self.printer_label = QLabel("Impresora")
         self.mainLayout.addWidget(self.printer_label, 1, 0, 1, 1)
         self.path_label.setFixedHeight(50)

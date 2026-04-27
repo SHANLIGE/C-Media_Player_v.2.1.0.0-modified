@@ -9,9 +9,9 @@ from PySide6.QtWebEngineCore import QWebEnginePage,QWebEngineSettings
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWebChannel import QWebChannel
 
+from PySide6.QtCore import QFile, QUrl
 
-from pynput.mouse import Button, Controller
-
+from .Event import Event
 import logging
 
 # Clases externas
@@ -41,8 +41,8 @@ class WebPage(QWebEnginePage):
         :param lineNumber: int. numero de linea
         :param sourceID: str. id de la fuente
         """
-        log = f"JS Console: {message}"
-        #print(log)
+        log = f"JS Console [{level}] line {lineNumber}: {message}"
+        print(log)
 
     @Slot(str)
     def ejecutarJavaScript(self, script):
@@ -51,8 +51,6 @@ class WebPage(QWebEnginePage):
         :param script: str. script a ejecutar
         """
         self.runJavaScript(script)
-
-
 
 
 class WebViewFrame(QWidget):
@@ -117,37 +115,33 @@ class WebViewFrame(QWidget):
 
 
     def showEvent(self, e):
-        if self.loaded:
-            for api in list(self.apis.values()):
-                api.get_event().loaded()
-        else:
-            self.loaded = True
+        super().showEvent(e)
+        
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_F5:
             self.view.setUrl(QUrl(self.settings["UrlInicio"]))
         event.accept()
+
     def on_load_finished(self, ok):
         """
         Evento de finalización del estado de carga
         Carga las apis al contenedor y cambia la url de la barra de navegación
         """
+        print("Web cargada")
+
         for api in list(self.apis.values()):
             api.get_event().set_page(self.view.page())
-            
+
         self.load_apis()
+
         if self.nav_bar:
-            # Utilizamos toString() para obtener la URL
             self.nav_bar.set_url(self.view.page().url().toString())
         
-        if self.loaded:
-            for api in list(self.apis.values()):
-                api.get_event().loaded()
-        else:
-            self.loaded = True
+        #llamar loaded() 
+        self.loaded = True
+        for api in list(self.apis.values()):
+            api.get_event().loaded()
 
-        # Simulación de clic; evalúa si es necesario en producción
-        m = Controller()
-        m.click(Button.left, 1)
     def load_apis(self):
         """
         Carga las APIs al contenedor web
@@ -177,6 +171,8 @@ class WebViewFrame(QWidget):
         Establece las APIs en la clase
         :param apis: dict. APIs
         """
+        print("Estableciendo APIs en WebViewFrame")
+
         self.apis = apis
         self.apis["speech"] = SpeechSynthesis()
         self.apis['local_media'] = LocalMedia()

@@ -7,10 +7,11 @@ import math #Libreria de matematicas
 import cv2 #Libreria de manipulacion de imagenes
 from ...Event import Event
 
+
 class Printer():
 
     """
-    Clase de impresora SAT. Conexion mediante puerto serial y puerto USB.
+    Clase de impresora TM-T88V. Conexion mediante puerto serial y puerto USB.
     :param device: dic. Datos de la impresora
     """
     
@@ -24,20 +25,41 @@ class Printer():
         self.__cambios = {}
         self.__version = None
         self.event = Event("Impresion")
+        self.device = device  
 
-            
-        if device ["NombrePuerto"] == "USB":
-            self.printer = UsbConnection(0x20d1, 0x7008)
-        else:
-            self.printer = SerialConnection(device["NombrePuerto"],baudrate=device["Baudios"], parity=device["Paridad"], stopbits=device["BitsParada"], bytesize=device["BitsDatos"]) #/dev/ttyUSB0 para puerto serial usb 0
+  
+        self.printer = None
+        print("DEVICE:", device, type(device))
+        print("USB OBJ:", getattr(self, "printer", None))
+        print("HAS DEVICE ATTR:", hasattr(self, "printer") and hasattr(self.printer, "device"))
 
+        #Extraer configuración real
+        config = device.get("PuertoSerial", {})
 
-        if self.printer.device is None:
-            self.printer = None
+       
+        try:
+            if config.get("NombrePuerto") == "/dev/ttyUSB0":
+                    self.printer = UsbConnection(0x0403, 0x6001)
+            else:
+                    self.printer = SerialConnection(
+                        "/dev/ttyUSB0",
+                        baudrate=config.get("Baudios", 9600),
+                        parity=config.get("Paridad", "N"),
+                        stopbits=config.get("BitsParada", 1),
+                        bytesize=config.get("BitsDatos", 8)
+                    )
+        except Exception as e:
+                print("Error inicializando impresora:", e)
+                self.printer = None
+
+        if self.printer is None:
             self.event.awake("NotificarError", [json.dumps("Impresora No Encontrada")])
+
         #Constructor
         self.detalle = "Manejo de puerto USB o puerto serial segun selección"
         self.__cambios[self.__version] = self.detalle
+        
+        
 
     def getPrinter(self):
         return self.printer
@@ -72,21 +94,72 @@ class Printer():
     
     #Metodos Impresora
     def imprimir(self, lineas, logo=None):
-
         """
         Imprime un Ticket
-        :param lineas: str. lineas de impresion separadas por un salto de linea '\\n'
-        :param logo: str. opc. ubicacion del logo en formato .bmp
-        :return: bytearray. Arreglo de bits con la informacion del ticket 
+        :param lineas: dict o str. Datos de impresión o texto plano
+        :param logo: str. opc. ubicación del logo en formato .bmp
         """
 
-        Tx = bytearray()
-        if logo:
-            Tx += self.Logo(logo)
-        
-        Tx += self.Ticket(lineas.split('\n'))
-        self.printer.write(Tx)
-        return Tx
+        # Seguridad: validar impresora
+        if not self.printer:
+            print("No hay impresora física inicializada")
+            return
+
+        try:
+            print("Generando ticket ESC/POS...")
+
+            texto = ""
+
+            if isinstance(lineas, dict):
+                texto = lineas.get("Texto", {}).get("Texto", "")
+            else:
+                texto = str(lineas)
+
+            lineas_lista = texto.split("\n")
+
+            while len(lineas_lista) < 15:
+                lineas_lista.append("")
+
+            tx = self.Ticket([
+                lineas_lista[0],
+                lineas_lista[1],
+                lineas_lista[2],
+                lineas_lista[3],
+                lineas_lista[4],
+                lineas_lista[5],
+                lineas_lista[6],
+                lineas_lista[7],
+                lineas_lista[8],
+                lineas_lista[9],
+                lineas_lista[10],
+                lineas_lista[11],
+                lineas_lista[12],
+                lineas_lista[13],
+                lineas_lista[14],
+            ])
+
+            # =========================
+            # FIX CRÍTICO DE IMPRESIÓN
+            # =========================
+
+            if hasattr(self.printer, "write"):
+                self.printer.write(tx)
+
+                # fuerza envío inmediato si existe flush
+                if hasattr(self.printer, "flush"):
+                    self.printer.flush()
+
+                # pequeño delay para hardware real ESC/POS
+                time.sleep(0.3)
+
+                print("TICKET ENVIADO A IMPRESORA FÍSICA")
+
+            else:
+                raise Exception("Driver de impresora inválido")
+
+        except Exception as e:
+            print("Error imprimiendo ticket:", e)
+            self.event.awake("NotificarError", [json.dumps(str(e))])    
 
     
     def get_paper(self):     
@@ -95,7 +168,7 @@ class Printer():
         Retorna el estado del papel de la impresora
         :return: dic. estado del papel de la impresora
         """
-         
+    
         self.printer.write(b'\x1B\x76') #GS V       
         time.sleep(0.2)
         paper_state = self.printer.read()
@@ -163,6 +236,7 @@ class Printer():
         :return: bytearray. informacion del logo
         """
         
+   
         Tx = self.Logo(logo)
         self.printer.write(Tx) 
         return Tx
@@ -183,7 +257,7 @@ class Printer():
         mediano = "[@TF:M@]"
         grande = "[@TF:G@]"
 
-        interlineado = (0x2A,0x2A,0x2A) # 0:  interlineado 4, 1:  interlineado 5, 2:  interlineado 6 
+        interlineado = (0x30,0x30,0x30) # 0:  interlineado 4, 1:  interlineado 5, 2:  interlineado 6 
 
         tx = bytearray()
         tamano = len(lineas)
@@ -251,9 +325,8 @@ class Printer():
                             else:
                                 interlineado = (0x40, 0x60, 0x30)
                         else:
-                            print("Hola")
                             tx += bytearray([0x1B, 0x57, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02,0x70, 0x04]) #seleccion area de impresion
-                            interlineado = (0x2A, 0x2A, 0x2A)
+                            interlineado = (0x30, 0x30, 0x30)
                     #No existen lineas configuradas para qr
                     else:
                         if (tamano4 == "big" and tamano5 == "big") or (tamano4 == "big" and tamano6 == "big") or (tamano6 == "big" and tamano5 == "big"):
@@ -273,8 +346,8 @@ class Printer():
                             else:
                                 interlineado = (0x40, 0x60, 0x30)
                         else:
-                            tx += bytearray([0x1B, 0x57, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02,0x3A, 0x03]) #seleccion area de impresion
-                            interlineado = (0x2A, 0x2A, 0x2A)
+                            tx += bytearray([0x1B, 0x57, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02,0x3E, 0x03]) #seleccion area de impresion
+                            interlineado = (0x30, 0x30, 0x30)
                 #llegan menos de 13 lineas            
                 else:
                     if (tamano4 == "big" and tamano5 == "big") or (tamano4 == "big" and tamano6 == "big") or (tamano6 == "big" and tamano5 == "big"):
@@ -295,7 +368,7 @@ class Printer():
                             interlineado = (0x40, 0x60, 0x30)
                     else:
                         tx += bytearray([0x1B, 0x57, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02,0x3E, 0x03]) #seleccion area de impresion
-                        interlineado = (0x2A, 0x2A, 0x2A)
+                        interlineado = (0x30, 0x30, 0x30)
 
             #las lineas 4 y 5 estan vacias
             else:
@@ -303,18 +376,18 @@ class Printer():
                     #Verifica que las lineas de text y codigo qr existan
                     if lineas[13] not in nempty or lineas[14] not in nempty:
                         tx += bytearray([0x1B, 0x57, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02,0xBE, 0x02]) #seleccion area de impresion
-                        interlineado = (0x2A, 0x2A, 0x2A)
+                        interlineado = (0x30, 0x30, 0x30)
                     #No existeb las lineas configuradas para qr
                     else:
                         tx += bytearray([0x1B, 0x57, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02,0xBE, 0x02]) #seleccion area de impresion
-                        interlineado = (0x2A, 0x2A, 0x2A)
+                        interlineado = (0x30, 0x30, 0x30)
                 #llegan menos de 13 lineas
                 else:
                     tx += bytearray([0x1B, 0x57, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02,0xBE, 0x02]) #seleccion area de impresion
-                    interlineado = (0x2A, 0x2A, 0x2A)
+                    interlineado = (0x30, 0x30, 0x30)
         else:
             tx += bytearray([0x1B, 0x57, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02,0x9E, 0x02]) #seleccion area de impresion
-            interlineado = (0x2A, 0x2A, 0x2A)
+            interlineado = (0x30, 0x30, 0x30)
         tx += bytearray([0x1B, 0x54, 0x02]) #Direccion de impresion de derecha izquierda
         tx += bytearray([0x1D, 0x5C, 0x40, 0x02]) #Posicion vertical relativa
         tx += bytearray([0x1D, 0x2F, 0x33]) #Imprimir Logo cuádruple
@@ -379,7 +452,7 @@ class Printer():
                 mientras = self.Letras(line1)
                 for k in range(len(mientras)):
                     tx.append(mientras[k])
-            tx += bytearray([0x0A]) # salto de linea 
+            tx += bytearray([0x0A, 0x0A]) # salto de linea 
     
         #endregion linea 1
         #region linea 2
@@ -392,7 +465,7 @@ class Printer():
         #endregion linea 2
         tx += bytearray([0x0A])# salto de linea 
         tx += bytearray([0x1B, 0x33, 0x28]) #selecionar espaciado 
-        tx += bytearray([0x1B,0x21,0x01,0x0A, 0x09])# selecionar modo de impresion
+        tx += bytearray([0x1B,0x21,0x01,0x09])# selecionar modo de impresion
     
         #region linea 3
         if (tamano > 2):
@@ -467,7 +540,7 @@ class Printer():
         #endregion hora
 
             #tx[i++] = 0x1B; tx[i++] = 0x33; tx[i++] = 0x5B;  # seleccionar espaciado 
-        tx += bytearray([0x0A]) # salto de linea
+        tx += bytearray([0x0A, 0x0A]) # salto de linea
         tx += bytearray([0x1B, 0x33, interlineado[0]]) # seleccionar espaciado
     
 
@@ -544,7 +617,7 @@ class Printer():
             if lineas[13] not in nempty:
                 tx += bytearray([0x1B, 0x33, 0x28]) # seleccionar espaciado
                 tx += bytearray([0x1B, 0x21, 0x01]) # seleccionar modo de impresion
-                tx += bytearray([0x09])
+                tx += bytearray([0x09] )
                 
 
                 line13 = bytearray(lineas[13].encode('utf-8'))
@@ -582,7 +655,7 @@ class Printer():
         tx += bytearray([0x1B, 0x44, 0x0D, 0x00]) # tabulaciones horizontales
         tx += bytearray([0x1B, 0x54, 0x01]) # direccion de impresion de derecha a izquierda
         tx += bytearray([0x1B, 0x33, 0x18]) # seleccionar espaciado
-        tx += bytearray([0x1B, 0x21, 0x00, 0x09, 0x20, 0x20 , 0x20 ]) # seleccionar modo de impresion 
+        tx += bytearray([0x1B, 0x21, 0x00, 0x09]) # seleccionar modo de impresion 
         #region linea 8
         if tamano > 7:
         
@@ -599,7 +672,7 @@ class Printer():
 
         #endregion linea 8
         tx += bytearray([0x0A, 0x09]) # salto de linea
-        tx += bytearray([0x20, 0x20 , 0x20 ])
+    
 
         #region linea 9
         if tamano > 8:
@@ -615,7 +688,7 @@ class Printer():
 
         #endregion linea 9
         tx += bytearray([0x0A, 0x09]) # salto de linea
-        tx += bytearray([0x20, 0x20 , 0x20 ])
+    
         
         #region linea 10
         if tamano > 9:

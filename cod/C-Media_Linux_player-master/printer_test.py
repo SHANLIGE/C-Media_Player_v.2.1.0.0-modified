@@ -1,43 +1,157 @@
-#http://192.168.1.138:8823/Player.aspx?Recurso=Tablero1%20OfficeMax&idoficina=1&idtablero=1&fullscreen=1
+import serial
+import time
 
-from App.AppFrames.Controllers.Printers import NCR7197
-from App.AppFrames.Controllers.Printers import TM_T88V
 
-def main():
-    #printer_1 = NCR7197.Printer({"NombrePuerto": "USB"})
-    printer_2 = TM_T88V.Printer({"NombrePuerto":"USB"})
-    
-    a = (b"\x1Dd\x05")
+class UniversalESCPrinter:
 
-    a_1 = (b"\x1bL\x1bW\x00\x00\x00\x00\x00\x02>\x03\x1bT\x02"+ #inicializar
-        b"\x1D\x5C\x40\x02"+ #Impresión vertical relativa
-        b"\x1d/3"+ #Imprimir Logo 
-        b""+
-        b"\x1bW\x00\x00\x00\x00\x00\x02>\x03"+
-        b"\x1bt\x02"+  #Caracteres multilengua
-        b"\x1bT\x02"+ #Impresión vertical relativa
-        b"\x1b2\x1b!\x00"+ #Caracteres y fuente
-        b"\x1bD\x13\x00"+ #Posiciones de Tab
-        b"\x1d\x5c\00\x00\x1b!0"+ #Posicicion y fuente
-        b"Linea1\nLinea2\nLinea3"+
-        b""+
-        b"\xFF")
-    a_2 = (b"\x1bL\x1bW\x00\x00\x00\x00\x00\x02>\x03\x1bT\x03"+ #inicializar
-        b"\x1D\x5C\x40\x02"+ #Impresión vertical relativa
-        b"\x1d/3"+ #Imprimir Logo 
-        b"\x1bW\x00\x00\x00\x00\x00\x02>\x03"+
-        b"\x1bt\x02"+  #Caracteres multilengua
-        b"\x1bT\x02"+ #Impresión vertical relativa
-        b"\x1b2\x1b!\x00"+ #Caracteres y fuente
-        b"\x1bD\x13\x00"+ #Posiciones de Tab
-        b"\x1d\\(\x00\x1b!0"+ #Posicicion y fuente
-        b"Linea1\n\nLinea2\n"+
-        b""+
-        b"\x1b\x0c\x1dV\x01")
-    #printer_1.imprimir("Linea1\nLinea2\nLinea3\nLinea4\nlinea5\nlinea6") #,"/home/luis/Descargas/logo_ciel.bmp"
-    #printer_1.printer.write(a_1)
-    printer_2.printer.write(a_2)
+    def __init__(self, port="/dev/ttyUSB0", baudrate=115200):
+        self.port = port
+        self.baudrate = baudrate
+        self.printer = None
 
+        self.connect()
+
+    def connect(self):
+        try:
+            self.printer = serial.Serial(
+                self.port,
+                baudrate=self.baudrate,
+                bytesize=8,
+                parity=serial.PARITY_NONE,
+                stopbits=1,
+                timeout=1
+            )
+
+            time.sleep(0.2)
+
+            # Reset impresora
+            self.printer.write(b'\x1B\x40')
+
+            print(f"✔ Conectado en {self.port} @ {self.baudrate}")
+
+        except Exception as e:
+            raise Exception(f"No se pudo conectar: {e}")
+
+    def send(self, data):
+        # envío por bloques (clave para SAT)
+        chunk_size = 256
+
+        for i in range(0, len(data), chunk_size):
+            self.printer.write(data[i:i+chunk_size])
+            time.sleep(0.03)
+
+        self.printer.flush()
+        time.sleep(0.1)
+
+    def build_ticket(self, lineas):
+
+        t = bytearray()
+
+        # INIT
+        t += b'\x1B\x40'      # reset
+        t += b'\x1B\x74\x02'  # charset
+        t += b'\x1B\x32'      # line spacing
+        t += b'\x1B\x61\x01'  # centrado
+
+        def add(texto):
+            t.extend(texto.encode('latin-1', errors='ignore') + b'\n')
+
+        # =====================
+        # HEADER
+        # =====================
+        t += b'\x1B\x21\x30'  # doble tamaño
+        if len(lineas) > 0: add(lineas[0])
+
+        t += b'\x1B\x21\x00'  # normal
+        if len(lineas) > 1: add(lineas[1])
+        if len(lineas) > 2: add(lineas[2])
+
+        t += b'\n'
+
+        # =====================
+        # BODY
+        # =====================
+        t += b'\x1B\x61\x00'  # izquierda
+
+        for i in range(3, 7):
+            if len(lineas) > i:
+                add(lineas[i])
+
+        t += b'\n'
+
+        # =====================
+        # TURNO (DESTACADO)
+        # =====================
+        t += b'\x1B\x61\x01'   # centro
+        t += b'\x1D\x21\x11'   # tamaño grande
+
+        if len(lineas) > 10:
+            add("TURNO: " + lineas[10])
+
+        t += b'\x1D\x21\x00'   # normal
+
+        # =====================
+        # SERVICIO
+        # =====================
+        if len(lineas) > 11:
+            add("SERVICIO: " + lineas[11])
+
+        if len(lineas) > 12:
+            add(lineas[12])
+
+        t += b'\n'
+
+        # =====================
+        # FOOTER
+        # =====================
+        t += b'\x1B\x61\x01'
+
+        for i in [7, 8, 9]:
+            if len(lineas) > i:
+                add(lineas[i])
+
+        t += b'\n\n\n'
+
+        # CUT
+        t += b'\x1D\x56\x00'
+
+        return t
+
+    def print(self, lineas):
+        tx = self.build_ticket(lineas)
+        self.send(tx)
+
+    def close(self):
+        if self.printer:
+            self.printer.close()
+
+
+# =========================
+# TEST
+# =========================
 
 if __name__ == "__main__":
-    main()
+
+    printer = UniversalESCPrinter(
+        port="/dev/ttyUSB0",
+        baudrate=9600 
+    )
+
+    lineas = [
+        "MI EMPRESA",
+        "NIT: 123456789",
+        "Direccion: Bogota",
+        "----------------------",
+        "Cliente: General",
+        "Caja 1",
+        "----------------------",
+        "Gracias por su visita",
+        "Tel: 1234567",
+        "Bogota",
+        "A001",          # TURNO
+        "PAGO",          # SERVICIO
+        "2026-04-21 10:00"
+    ]
+
+    printer.print(lineas)
+    printer.close()
