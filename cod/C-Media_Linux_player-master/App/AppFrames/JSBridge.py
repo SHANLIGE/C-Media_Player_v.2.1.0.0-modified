@@ -88,7 +88,8 @@ class JSBridge(QtCore.QObject):
             for controller, methods in functions.items():
                 method = [{"func": name, "params":params} for name, params in methods.items()]
                 funs.append({"controller": controller, "methods":method})
-				#Se modificó y actualizó la conexión con los eventos en el servidor
+                print("Puente activado")
+            #se modifico conexion con puente y se actualizo la funcion de llamada a imprimir
             js = """window.api = {
                         _createApi: function(controllerList){
                         for(var i = 0; i < controllerList.length; i++){
@@ -213,6 +214,5 @@ class JSBridge(QtCore.QObject):
             print("Generando funciones para el puente JSBridge")
             return js % funs
         return generate_func()
-
     
         
