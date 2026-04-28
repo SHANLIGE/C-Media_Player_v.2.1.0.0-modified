@@ -7,7 +7,7 @@ El Propósito del desarrollo en el presente repositorio ofrecer un reproductor d
 El reproductor utiliza el control navegador de C-Media a traves del cual se accede al despliegue de un Player/Windows, a demas, se ofrece la posibilidad de usar impresoras seriales, y lectores.
 
 **Versión actual:** 
-2.0
+2.2
 
 
 ### Documentos complementarios 📄

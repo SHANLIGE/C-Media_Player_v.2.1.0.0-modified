@@ -8,6 +8,14 @@ PORT = "/dev/ttyACM0"
 BAUD = 9600
 CMD_TRIGGER = b'\x16\x4D\x0D'  # SYN M CR — dispara un escaneo
 
+def __init__(self, device=None):
+    self.device = device
+   
+    self.connect()
+    print("DEVICE:", device, type(device))
+    print("USB OBJ:", self.device.get("USB ", "No hay USB"), type(self.device.get("USB ", "No hay USB")))
+    print("PUERTO SERIAL:", self.device.get("PORT ", "No hay PORT"), type(self.device.get("PORT ", "No hay PORT")))
+
 def extraer_cedula(raw_bytes):
     """
     Extrae el número de cédula de los bytes raw del lector.
@@ -15,6 +23,7 @@ def extraer_cedula(raw_bytes):
     Si empieza en 0 → cédula de 8 dígitos, se eliminan los ceros.
     """
    
+
     try:
         texto = raw_bytes.decode('latin-1')  # latin-1 preserva todos los bytes
 
