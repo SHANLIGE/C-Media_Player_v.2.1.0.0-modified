@@ -7,11 +7,7 @@ from PySide6.QtGui import *
 import sys
 import logging
 import os
-from PySide6.QtPrintSupport import QPrinterInfo
 
-def debug_printers():
-    print("IMPRESORAS DISPONIBLES:")
-    print(QPrinterInfo.availablePrinters())
     
 argv = sys.argv
 debug = "--debug" in sys.argv

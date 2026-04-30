@@ -17,6 +17,14 @@ def import_honeywell(params):
         return BarCodeReader()
         
 
+def import_LectorUniversal(params):
+    from .LectorUniversal import BarCodeReader
+    try:
+        return BarCodeReader(params)
+    except Exception as e:
+        logging.error(str(e))
+        return BarCodeReader()
+        
 
 def get_code_readers():
     code_reader = {
@@ -25,6 +33,9 @@ def get_code_readers():
         },
         "Magellan": {
             "import": import_magellan
+        },
+        "LectorUniversal": {
+            "import": import_LectorUniversal
         }
     }
     return code_reader
