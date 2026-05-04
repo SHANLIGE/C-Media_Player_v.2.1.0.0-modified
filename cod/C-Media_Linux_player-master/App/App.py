@@ -1,4 +1,4 @@
-# Librerias de GUI - PySide6
++++++++++# Librerias de GUI - PySide6
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 from PySide6.QtGui import *
@@ -16,13 +16,13 @@ def debug_printers():
 argv = sys.argv
 debug = "--debug" in sys.argv
 
-# --- Detección de arquitectura ARM64 / Linaro ---
+#arquitectura aarch64 arm linaro
 import platform
 arch = platform.machine()
 is_arm = arch in ("aarch64", "arm64", "armv7l")
 
 if debug:
-    # Clases internas - Modo debug (incluye ARM64 Linaro)
+    #desarrollo
     import importlib.util
 
     def _import_local(module_name, rel_path):
@@ -45,17 +45,17 @@ if debug:
     Player = _player_mod.Player
 
 else:
-    # Clases internas - Compilación
+    #compilado
     from App.ConfigGUI.MainFrame import MainFrame as Configuration
     from App.Player import Player as Player
 
 
-# --- Directorio de configuración ---
+#config logs
 CONFIG_DIR = os.path.expanduser("~/.config/Ciel/C-Media_Player")
 LOG_DIR    = os.path.join(CONFIG_DIR, "logs")
 os.makedirs(LOG_DIR, exist_ok=True)   # Crea el directorio si no existe (necesario en Linaro fresh install)
 
-# Creación del archivo de logs
+#creacion de logs
 logging.basicConfig(
     filename=os.path.join(LOG_DIR, "log.log"),
     level=logging.DEBUG,
@@ -69,17 +69,15 @@ if is_arm:
 # Descomentarear la siguiente línea para activar depuración remota (chrome://inspect)
 # os.environ["QTWEBENGINE_REMOTE_DEBUGGING"] = "9222"
 
-# --- Flags de Chromium compatibles con ARM64 ---
+#flags de Chromium compatibles con arm64
 chromium_flags = "--disable-pinch"
 if is_arm:
-    # En ARM/Linaro es necesario deshabilitar la aceleración GPU y el sandbox
-    # para evitar crashes del proceso de render de QtWebEngine
+    #desabilidar aceleracion gpu y qtwebengine sandbox
     chromium_flags += " --disable-gpu --no-sandbox --disable-dev-shm-usage"
 
 os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = chromium_flags
 
-# En ARM64 con algunos drivers Mesa/Linaro, forzar software rendering evita
-# pantallas negras o crashes al iniciar QtWebEngine
+#compatibilidad
 if is_arm:
     os.environ.setdefault("QT_QUICK_BACKEND", "software")
     os.environ.setdefault("LIBGL_ALWAYS_SOFTWARE", "1")
@@ -100,7 +98,7 @@ splash = QSplashScreen(pixmap)
 splash.show()
 root.processEvents()
 
-# --- Iniciación ---
+# Iniciación
 if len(argv) == 1:
     try:
         player = Player(debug)
