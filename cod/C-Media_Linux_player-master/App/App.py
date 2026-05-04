@@ -1,4 +1,4 @@
-+++++++++# Librerias de GUI - PySide6
+# Librerias de GUI - PySide6
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 from PySide6.QtGui import *
