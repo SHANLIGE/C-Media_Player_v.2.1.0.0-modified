@@ -1,6 +1,9 @@
+<img width="402" height="152" alt="SplashScreen" src="https://github.com/user-attachments/assets/d935eda8-a7c8-4838-be7e-5920157eb28f" />
+
 
 ![C-Media](https://img.shields.io/badge/C--Media-Software-orange?style=for-the-badge)
-# C-Media Player ### Linux — X86_64 / ARM64
+# C-Media Player
+### Linux — X86_64 / ARM64
 
 C-Media® Software permite desplegar contenidos dinámicos en pantallas instaladas en el mismo lugar o distribuidas en diferentes ubicaciones, sincronizando la reproducción de experiencias digitales para la audiencia.
 
