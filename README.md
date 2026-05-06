@@ -20,7 +20,7 @@ El reproductor C-Media Linux es la herramienta desarrollada por Ciel Ingeniería
 
 
 
-![ubuntu](https://img.shields.io/badge/Ubuntu-20.04-E95420?logo=ubuntu&logoColor=white)
+![ubuntu](https://img.shields.io/badge/Ubuntu-22.04-E95420?logo=ubuntu&logoColor=white)
 ![python](https://img.shields.io/badge/Python-3.10-3670A0?logo=python&logoColor=ffdd54)
 ![pyside6](https://img.shields.io/badge/PySide6-6.8.0.2-41CD52?logo=qt&logoColor=white)
 ![arch-x86](https://img.shields.io/badge/x86__64-supported-blue)
