@@ -1,4 +1,4 @@
-<img width="402" height="152" alt="SplashScreen" src="https://github.com/user-attachments/assets/d935eda8-a7c8-4838-be7e-5920157eb28f" />
+<img width="202" height="52" alt="SplashScreen" src="https://github.com/user-attachments/assets/d935eda8-a7c8-4838-be7e-5920157eb28f" />
 
 
 ![C-Media](https://img.shields.io/badge/C--Media-Software-orange?style=for-the-badge)
