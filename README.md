@@ -49,7 +49,7 @@ Resumen de dependencias Python:
 En ARM64/Linaro hay que agregar las variables de entorno para el driver de video:
 
 ```bash
-LIBGL_ALWAYS_SOFTWARE=1 QT_QPA_PLATFORM=xcb python3 App.py --debug
+LIBGL_ALWAYS_SOFTWARE=1 QT_QPA_PLATFORM=xcb python3 -m App.App.py 
 ```
 
 ```
