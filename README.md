@@ -135,9 +135,8 @@ upx_exclude=["libQt6*.so*", "libPySide6*.so*", "Qt6*.so*"]
 
 El hilo print_screens en Player.py monitorea si la pantalla se desconecta y reconecta verificando el nombre del display. En Linaro la pantalla aparece como :0.0 cuando está conectada. Si cambia de nombre, el hilo detecta la desconexión y al volver llama showFullScreen() después de 0.5 segundos.
 <img width="299" height="133" alt="Captura desde 2026-05-06 11-08-34" src="https://github.com/user-attachments/assets/8b453d86-555a-4345-906a-a9c966c0fdf5" />
-<img width="299" height="133" alt="Captura desde 2026-05-06 11-08-50" src="https://github.com/user-attachments/assets/e65c64c8-b1e1-4c50-9b2e-587a58720aa0" />
-<img width="299" height="133" alt="Captura desde 2026-05-06 11-08-44-1" src="https://github.com/user-attachments/assets/e01f5780-792a-4116-bca7-d7277cb1262e" />
 <img width="299" height="133" alt="Captura desde 2026-05-06 11-08-44" src="https://github.com/user-attachments/assets/10f89907-b3bb-4917-b08b-56e2a88dd5b3" />
+<img width="299" height="133" alt="Captura desde 2026-05-06 11-08-50" src="https://github.com/user-attachments/assets/e65c64c8-b1e1-4c50-9b2e-587a58720aa0" />
 <img width="199" height="225" alt="Captura desde 2026-04-22 12-17-03" src="https://github.com/user-attachments/assets/2827b60e-d597-4d2a-87c2-a8f0ffaed932" />
 <img width="199" height="225" alt="Captura desde 2026-04-22 12-17-11" src="https://github.com/user-attachments/assets/26462504-fe7b-482e-93f3-ab5cd35e30cc" />
 
