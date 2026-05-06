@@ -42,7 +42,7 @@ El reproductor C-Media Linux es la herramienta desarrollada por Ciel Ingeniería
 ### Pre-requisitos ​📋​
 
 
-- Ubuntu 20.04 o superior
+- Ubuntu 22.04 o superior
 - Python 3.10
 - PySide6 con soporte Qt WebEngine 6 — https://doc.qt.io/qt-6/qtwebengine-index.html
 - Dependencias del sistema:
