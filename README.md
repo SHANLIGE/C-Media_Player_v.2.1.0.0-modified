@@ -186,6 +186,6 @@ upx_exclude=["libQt6*.so*", "libPySide6*.so*", "Qt6*.so*"]
 
 - **Andrés Mauricio Gómez** (Actualización)
 - **@n.luque** (Desarrollo, codificaciòn, Bugs)
-- **v.hernadez** (implementación de hardware)
+- **@v.hernadez** (implementación de hardware)
 
 
