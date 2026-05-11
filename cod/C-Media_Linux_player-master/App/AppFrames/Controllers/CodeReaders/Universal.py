@@ -27,11 +27,11 @@ class BarCodeReader():
         self.thread = None
         self.killThread = False
 
-        self.event = Event("Omnidireccional.LectorUniversal")
+        self.event = Event("Omnidireccional.Universal")
 
         self.connect()
 
-        self.detalle = "Lector Universal /dev/ttyACM0 presentation mode"
+        self.detalle = "Universal /dev/ttyACM0 presentation mode"
       
     # Api publica
     def get_result(self):
@@ -60,7 +60,7 @@ class BarCodeReader():
             p = self.device["NombrePuerto "]
             if p.startswith("/dev/"):
                 puerto = p
-        print(f"LectorUniversal: intentando conectar en {puerto}...")
+        print(f"Universal: intentando conectar en {puerto}...")
        
         try:
             self.reader = serial.Serial(
@@ -71,9 +71,9 @@ class BarCodeReader():
                 stopbits=serial.STOPBITS_ONE,
                 timeout=None,       #bloqueo hasta recibir presentation mode
             )
-            print(f"LectorUniversal: puerto {puerto} abierto correctamente")
+            print(f"Universal: puerto {puerto} abierto correctamente")
         except Exception as e:
-            print(f"LectorUniversal: no se pudo abrir {puerto}: {e}")
+            print(f"Universal: no se pudo abrir {puerto}: {e}")
             self.event.awake("NotificarError", [json.dumps("Lector No Encontrado")])
             self.reader = None
             return
@@ -100,7 +100,7 @@ class BarCodeReader():
             except Exception as e:
                 if self.killThread:
                     break
-                print(f"LectorUniversal error lectura: {e}")
+                print(f"Universal error lectura: {e}")
                 self.event.awake("NotificarError", [json.dumps("Error al leer los datos")])
                 break
 
@@ -121,7 +121,7 @@ class BarCodeReader():
                 try:
                     self.procesar_datos(datos[0], datos[1:])
                 except Exception as e:
-                    print(f"LectorUniversal error procesando trama: {e}")
+                    print(f"Universal error procesando trama: {e}")
                     self.event.awake(
                         "NotificarError",
                         [json.dumps("Error al interpretar la lectura")]
@@ -136,7 +136,7 @@ class BarCodeReader():
         Procesa documentos de identidad, QR o códigos de barras.
         prefix = primer byte de la trama; byte = resto de la trama (bytearray).
         """
-        print(f"LectorUniversal: trama recibida, prefix={prefix}, bytes={list(byte)}")
+        print(f"Universal: trama recibida, prefix={prefix}, bytes={list(byte)}")
         if prefix != 80:
             # Verificar si todos los bytes son imprimibles (QR / código de barras simple)
             # Si contiene bytes no imprimibles es una cédula con prefijo distinto a 'P'
@@ -282,7 +282,7 @@ class BarCodeReader():
                 cedula["Ciudad"] = bytearray(byte[i + 162] for i in range(3)).decode("utf-8")
                 cedula["LugarNacimiento"] = cedula["Departamento"] + cedula["Ciudad"]
                 cedula["Pais"] = "COL"
-                print(f"Honeywell: cédula procesada: {cedula}")
+                print(f"Universal: cédula procesada: {cedula}")
             
             ret = json.dumps(cedula).replace("{", "$#$").replace("}", "#$#").replace(",", "%#")
             self.event.awake("EstablecerJsonDocumento", [json.dumps(ret)])
@@ -294,7 +294,7 @@ class BarCodeReader():
     def _procesar_cedula_alternativa(self, byte):
         """
         Parsea cédulas cuya trama no empieza con 'P' (0x50).
-        Offsets confirmados empíricamente del Honeywell 3320g (trama ~532 bytes):
+        Offsets confirmados empíricamente del Universal(trama ~532 bytes):
           byte[47:57]   : número de cédula (10 dígitos ASCII)
           byte[57..79]  : primer apellido  (23 bytes, null-terminated)
           byte[80..102] : segundo apellido (23 bytes, null-terminated)
@@ -330,14 +330,14 @@ class BarCodeReader():
             cedula["LugarNacimiento"]   = ""
             cedula["Pais"]              = "COL"
 
-            print(f"Honeywell: cédula parseada → {cedula['Numero']} {cedula['PrimerNombre']} {cedula['PrimerApellido']} {cedula['SegundoApellido']}")
+            print(f"Universal: cédula parseada → {cedula['Numero']} {cedula['PrimerNombre']} {cedula['PrimerApellido']} {cedula['SegundoApellido']}")
 
             ret = json.dumps(cedula).replace("{", "$#$").replace("}", "#$#").replace(",", "%#")
             self.event.awake("EstablecerJsonDocumento", [json.dumps(ret)])
             return cedula
 
         except Exception as e:
-            print(f"Honeywell: error parseando cédula alternativa: {e}")
+            print(f"Universal: error parseando cédula alternativa: {e}")
             self.event.awake("NotificarError", [json.dumps("Error al interpretar la cédula")])
             return None
 

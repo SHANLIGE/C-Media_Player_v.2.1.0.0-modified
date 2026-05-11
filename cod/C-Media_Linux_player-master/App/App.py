@@ -8,6 +8,12 @@ import sys
 import logging
 import os
 
+import traceback, sys
+
+def excepthook(exc_type, exc_value, exc_tb):
+    traceback.print_exception(exc_type, exc_value, exc_tb)
+
+sys.excepthook = excepthook
     
 argv = sys.argv
 debug = "--debug" in sys.argv

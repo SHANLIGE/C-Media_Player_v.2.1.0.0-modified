@@ -10,7 +10,7 @@ class CodeReaderTabFrame(QWidget):
     def __init__(self):
         super().__init__()
         self.setEnabled(False)
-        self.readers = ["Honeywell", "Magellan", "LectorUniversal"]
+        self.readers = ["Honeywell", "Magellan", "Universal", "Newland"]
         self.get_settings()
         
         
