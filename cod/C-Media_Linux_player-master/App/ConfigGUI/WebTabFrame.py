@@ -131,7 +131,8 @@ class WebTabFrame(QWidget):
                 for controller in pantalla["Controles"]:
                     if "Control.NavegadorWebChrome.dll" in controller["NombreArchivo"]:
                         controller["ObjetoBase"]["UrlInicio"]             = self.url_entry.text().strip()
-                        controller["ObjetoBase"]["MostrarBarraNavegacion"] = self.nav_bar_button.get()
+                        controller["ObjetoBase"]["MostrarBarraNavegacion"] = self.nav_bar_button.isChecked()
+        
                         controller["ObjetoBase"]["UrlTerminal"]            = self.url_entry_terminal.text().strip()
 
             with open(path, "w", encoding="utf-8-sig") as f:
