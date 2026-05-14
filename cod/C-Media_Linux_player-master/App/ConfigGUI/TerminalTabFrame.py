@@ -153,6 +153,7 @@ class TerminalTabFrame(QWidget):
 
         self.mainLayout = QVBoxLayout(container)
         self.mainLayout.setSpacing(10)
+        
 
         grp_dir = QGroupBox("Dirección de terminal")
         grp_dir.setStyleSheet(STYLE_GROUP)
@@ -238,16 +239,22 @@ class TerminalTabFrame(QWidget):
         self.btn_eliminar.clicked.connect(self._eliminar_terminal)
         btn_row.addWidget(self.btn_eliminar)
 
+        self.save_button = QPushButton("Guardar")
+        self.save_button.setStyleSheet(STYLE_BTN)
+        btn_row.addWidget(self.save_button)
+
         btn_row.addStretch()
         vl_term.addLayout(btn_row)
 
         self.mainLayout.addWidget(grp_term)
 
-        
+    
+
         self.lbl_status = QLabel("")
         self.lbl_status.setStyleSheet("color: #4a5568; font-size: 11px; padding: 2px;")
         self.mainLayout.addWidget(self.lbl_status)
-
+        
+        
         bottom = QHBoxLayout()
         bottom.addStretch()
         img_label = QLabel()
