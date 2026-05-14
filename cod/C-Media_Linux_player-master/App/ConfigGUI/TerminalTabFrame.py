@@ -204,8 +204,11 @@ class TerminalTabFrame(QWidget):
         vl_term.addWidget(self.lbl_no_oficina)
 
         self.table_terminales = QTableWidget(0, 3)
-        self.table_terminales.setHorizontalHeaderLabels(["Terminal", "Id", "N° Asignado"])
-        self.table_terminales.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.table_terminales.setHorizontalHeaderLabels(["Terminal", "Id", "N°"])
+        header = self.table_terminales.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.Stretch)
+        header.setSectionResizeMode(1, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(2, QHeaderView.ResizeToContents)
         self.table_terminales.setStyleSheet(
             "QTableWidget{background-color:white;color:black;gridline-color:#b0bec5;}"
             "QTableWidget::item{background-color:white;color:black;}"
