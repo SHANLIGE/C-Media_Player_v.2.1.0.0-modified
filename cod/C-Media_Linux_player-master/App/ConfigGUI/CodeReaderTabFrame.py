@@ -10,7 +10,7 @@ class CodeReaderTabFrame(QWidget):
     def __init__(self):
         super().__init__()
         self.setEnabled(False)
-        self.readers = ["Honeywell", "Magellan", "Universal", "Newland"]
+        self.readers = ["UniversalLector"]
         self.get_settings()
         
         
@@ -73,7 +73,8 @@ class CodeReaderTabFrame(QWidget):
                         self.setEnabled(True)
                         name = controller["NombreArchivo"][45:]
                         name = name[:name.find(".")]
-                        self.index = self.readers.index(name)
+                        if name == "Honeywell":
+                            self.index = self.readers.index("UniversalLector")
 
     def save_settings(self):
         path = os.path.expanduser('~')+"/.config/Ciel/C-Media_Player/configs/config.json"
@@ -90,7 +91,14 @@ class CodeReaderTabFrame(QWidget):
             for pantalla in range(len(settings["Pantallas"])):
                 for controller in range(len(settings["Pantallas"][pantalla]["Controles"])):
                     if "Control.Captura.CodigoBarras.Omnidireccional" in settings["Pantallas"][pantalla]["Controles"][controller]["NombreArchivo"]:
-                        settings["Pantallas"][pantalla]["Controles"][controller]["NombreArchivo"] = "Control.Captura.CodigoBarras.Omnidireccional." + self.combo_box_reader.currentText() + ".dll"
+                        reader = self.combo_box_reader.currentText()
+
+                        if reader == "UniversalLector":
+                            reader = "Honeywell"
+
+                        settings["Pantallas"][pantalla]["Controles"][controller]["NombreArchivo"] = (
+                            "Control.Captura.CodigoBarras.Omnidireccional." + reader + ".dll"
+                        )
         
         with open(path, "w", encoding="utf-8-sig") as file:
             file.write(json.dumps(settings))
