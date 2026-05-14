@@ -140,7 +140,7 @@ class WebTabFrame(QWidget):
                     if "Control.NavegadorWebChrome.dll" in controller["NombreArchivo"]:
                         self.setEnabled(True)
                         self.url          = controller["ObjetoBase"].get("UrlInicio", "")
-                        self.nav_bar      = controller["ObjetoBase"].get("MostrarBarraNavegacion", False)
+                        self.nav_bar = controller["ObjetoBase"]["MostrarBarraNavegacion"]
                         self.url_terminal = controller["ObjetoBase"].get("UrlTerminal", "")
         except Exception as e:
             print(f"[WebTabFrame] get_settings error: {e}")
