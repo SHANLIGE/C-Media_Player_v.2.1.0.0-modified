@@ -27,14 +27,7 @@ def import_Newland(params):
         return BarCodeReader()
         
 
-def import_Universal(params):
-    from .Universal import BarCodeReader
-    try:
-        return BarCodeReader(params)
-    except Exception as e:
-        logging.error(str(e))
-        return BarCodeReader()
-        
+ 
 
 
 def get_code_readers():
@@ -45,9 +38,7 @@ def get_code_readers():
         "Magellan": {
             "import": import_magellan
         },
-        "Universal": {
-            "import": import_Universal
-        },
+      
         "Newland": {
             "import": import_Newland
         }
