@@ -54,14 +54,13 @@ class WebTabFrame(QWidget):
         self.mainLayout = QGridLayout()
         self.setLayout(self.mainLayout)
 
-        # Fila 0 – URL Selector + toggle barra de navegacion
+        # Fila 1 – URL Selector + toggle barra de navegacion
         self.url_label = QLabel("Url")
         self.url_label.setFixedHeight(50)
         self.mainLayout.addWidget(self.url_label, 0, 0, 1, 1)
         self.url_entry = QLineEdit(self.url)
-        self.mainLayout.addWidget(self.url_entry, 0, 1, 1, 4)
-        self.nav_bar_button = ToggleButton(self.nav_bar)
-        self.mainLayout.addWidget(self.nav_bar_button, 0, 5, 1, 1)
+        self.mainLayout.addWidget(self.url_entry, 0, 1, 1, 5)
+     
 
         self.terminal_label = QLabel("Terminal")
         self.terminal_label.setFixedHeight(50)
@@ -72,6 +71,16 @@ class WebTabFrame(QWidget):
         # Asignar después de conectar → dispara _sync_terminal_url con la URL cargada
         if self.url_terminal:
             self.url_entry_terminal.setText(self.url_terminal)
+
+        # Fila 2 – Barra de Navegación
+        self.nav_bar_label = QLabel("Barra de Navegación")
+        self.nav_bar_label.setFixedHeight(50)   
+        self.mainLayout.addWidget(self.nav_bar_label, 2, 0, 1, 2)
+        #self.nav_bar_button = ToggleButton(self.nav_bar)
+        self.nav_bar_button = QCheckBox(self)
+        self.nav_bar_button.setChecked(self.nav_bar)
+        #self.nav_bar_button.toggled.connect(self.funcionnb) # CAMBIAR FUNCION
+        self.mainLayout.addWidget(self.nav_bar_button, 2, 2)
 
         # Fila 3 – Guardar
         self.save_button = QPushButton("Guardar")
