@@ -86,7 +86,7 @@ class UniversalESCPrinter:
         t += b'\x1D\x21\x11'   # tamaño grande
 
         if len(lineas) > 10:
-            add("TURNO: " + lineas[10])
+            add("NULL: " + lineas[10])
 
         t += b'\x1D\x21\x00'   # normal
 
@@ -94,7 +94,7 @@ class UniversalESCPrinter:
         # SERVICIO
         # =====================
         if len(lineas) > 11:
-            add("SERVICIO: " + lineas[11])
+            add("NULL: " + lineas[11])
 
         if len(lineas) > 12:
             add(lineas[12])
@@ -138,19 +138,7 @@ if __name__ == "__main__":
     )
 
     lineas = [
-        "MI EMPRESA",
-        "NIT: 123456789",
-        "Direccion: Bogota",
-        "----------------------",
-        "Cliente: General",
-        "Caja 1",
-        "----------------------",
-        "Gracias por su visita",
-        "Tel: 1234567",
-        "Bogota",
-        "A001",          # TURNO
-        "PAGO",          # SERVICIO
-        "2026-04-21 10:00"
+        "NULL",
     ]
 
     printer.print(lineas)

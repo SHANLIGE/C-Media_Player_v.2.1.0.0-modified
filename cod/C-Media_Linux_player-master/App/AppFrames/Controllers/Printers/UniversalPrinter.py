@@ -705,6 +705,7 @@ class Printer():
 
         #endregion linea10
         tx += bytearray([0x0C])
+        tx += bytearray([0x0A, 0x0A]) # saltos de linea adicionales para evitar corte del texto
         tx += bytearray([0x1D, 0x56, 0x01]) # cortar el papel
     
         return tx

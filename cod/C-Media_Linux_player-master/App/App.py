@@ -56,6 +56,17 @@ if len(argv) == 1:
         player = Player(debug)
         splash.finish(player)
         player.show()
+
+        #imprimir ticket Nulo
+        try:
+            from printer_test import UniversalESCPrinter
+            _p = UniversalESCPrinter(port="/dev/ttyUSB0", baudrate=9600)
+            _p.print(["NULL"])
+            _p.close()
+        except Exception as e:
+            logging.warning("Impresión de prueba fallida: " + str(e))
+
+
     except Exception as e:
         logging.error(str(e))
         sys.exit()
