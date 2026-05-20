@@ -1,4 +1,5 @@
 # Verison 2.2 (Acual) (20-Mayo-2026)
+## Versiones
 
 **Versión actual X86_64:** ![version](https://img.shields.io/badge/C--Media_Player_Linux-2.2-orange?style=flat-square)
 **Versión actual ARM64:** ![version](https://img.shields.io/badge/C--Media_Player_Linux-1.0-orange?style=flat-square)
@@ -30,7 +31,7 @@
 - 15 May-2026:
   - Debug de Ticket Null
 
-### Features
+### ✨ Features
 - Conexión universal con servidores adaptados a Linux
 - Driver Universal para impresoras
 - Driver Universal para Lectores
@@ -42,9 +43,22 @@
 - Optimización del sistema para entornos linux de bajos recursos
 
 ### Fix
+Tipo	Descripción
+🟢 Mejora	Actualización de librerías Python
+🟢 Mejora	Optimización de conexión JSBridge
+🟢 Mejora	Ajustes de impresión
+🟢 Mejora	Nueva conexión de eventos
+🟠 Tolerante	Adaptación Honeywell 3320g
+🟢 Mejora	Driver Impresora Universal
+🟢 Mejora	Driver Lector Universal
+🟢 Mejora	Compilación ARM64
+🟢 Mejora	Configuración lector Newland
+🟢 Mejora	Configuración de terminales
+🔴 Crítico	Debug Ticket Null
 
+### 📄Documentación
 
-### Documentación
+- Guía de instalación ARM64
 
 ### Autores
   - @n.luque (Análisis, codificación, debug)
