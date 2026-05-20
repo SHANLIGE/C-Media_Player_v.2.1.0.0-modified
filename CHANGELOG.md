@@ -1,4 +1,6 @@
 #Verison 2.2 (Acual) (20-Mayo-2026)
+**Versión actual X86_64:** ![version](https://img.shields.io/badge/C--Media_Player_Linux-2.2-orange?style=flat-square)
+**Versión actual ARM64:** ![version](https://img.shields.io/badge/C--Media_Player_Linux-1.0-orange?style=flat-square)
 
 ###Hitos
 - 27-Abr-2026
