@@ -1,8 +1,9 @@
-#Verison 2.2 (Acual) (20-Mayo-2026)
+# Verison 2.2 (Acual) (20-Mayo-2026)
+
 **Versión actual X86_64:** ![version](https://img.shields.io/badge/C--Media_Player_Linux-2.2-orange?style=flat-square)
 **Versión actual ARM64:** ![version](https://img.shields.io/badge/C--Media_Player_Linux-1.0-orange?style=flat-square)
 
-###Hitos
+### Hitos
 - 27-Abr-2026
   - ACtualizaciòn de librerias Python
   - Mejoras en puente JS y WebView
@@ -28,7 +29,7 @@
 - 15 May-2026
   - Debug de Ticket Null
 
-###Features
+### Features
 - Conexión universal con servidores adaptados a Linux
 - Driver Universal para impresoras
 - Driver Universal para Lectores
@@ -39,12 +40,12 @@
 - Sistema de drivers fijos
 - Optimización del sistema para entornos linux de bajos recursos
 
-###Fix
+### Fix
 
 
-###Documentación
+### Documentación
 
-###Autores
+### Autores
   - @n.luque (Análisis, codificación, debug)
   - @v.hernandez (Análisis, pruebas de hardware)
 
