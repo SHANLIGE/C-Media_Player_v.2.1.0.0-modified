@@ -4,29 +4,30 @@
 **Versión actual ARM64:** ![version](https://img.shields.io/badge/C--Media_Player_Linux-1.0-orange?style=flat-square)
 
 ### Hitos
-- 27-Abr-2026
+- 27-Abr-2026:
   - ACtualizaciòn de librerias Python
   - Mejoras en puente JS y WebView
   - Ajustes en lógica de impresión
   - Nueva conexion de eventos
   - Actualizacion de gitignore para entorno y cache
   - Actualizacion de conexión jsbridge
-- 28-Abr-2026
+- 28-Abr-2026:
   - Adaptacion y conexion del controlador Honeywell3320g / pruebas con lector
 -30-Abr-2026
   - Creación del driver Impresora universal y debug
   - Creación del dirver lector universal y debug
   - Compilación grafica para Arquitectura Arm64
   - Configuracion lector newland para cedulas nuevas
-- 05-May-2026
+- 05-May-2026:
   - Eliminación de alertas de prueba
 - 11-May-2026
   - Creación de la sección de configuración de terminales
-- 14-May-2026
+- 14-May-2026:
   - Driver Lector Universal fijo
   - Driver Impresora Universal fija
   - Configuración y conexion de terminales
-- 15 May-2026
+  - Add NavBar save settings
+- 15 May-2026:
   - Debug de Ticket Null
 
 ### Features
