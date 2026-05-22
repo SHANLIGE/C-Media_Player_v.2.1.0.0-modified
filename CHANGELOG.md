@@ -53,9 +53,9 @@
 
 | Tipo | Descripción |
 |------|-------------|
-| 🟢 Mejora | Actualización de librerías Python |
-| 🟢 Mejora | Optimización de conexión JSBridge |
-| 🟢 Mejora | Ajustes de impresión |
+| 🔴 Crítico | Actualización de librerías Python |
+| 🔴 Crítico  | Optimización de conexión JSBridge |
+| 🟠 Tolerante | Ajustes de impresión |
 | 🟢 Mejora | Nueva conexión de eventos |
 | 🟠 Tolerante | Adaptación Honeywell 3320g |
 | 🟢 Mejora | Driver Impresora Universal |
@@ -63,7 +63,7 @@
 | 🟢 Mejora | Compilación ARM64 |
 | 🟢 Mejora | Configuración lector Newland |
 | 🟢 Mejora | Configuración de terminales |
-| 🔴 Crítico | Debug Ticket Null |
+| 🟢 Mejora | Debug Ticket Null |
 
 [ 🟢 Mejora ] [ 🟠 Tolerante ] [ 🔴 Crítico ]
 
