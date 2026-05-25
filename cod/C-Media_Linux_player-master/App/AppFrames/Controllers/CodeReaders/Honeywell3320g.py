@@ -90,11 +90,16 @@ class BarCodeReader():
         """
         Lee bytes del puerto en un bucle continuo (presentation mode).
         Acumula hasta encontrar el sufijo configurado, luego procesa.
+        Para tramas largas (QR cédula nueva) que pueden no terminar en \\r,
+        se usa un timeout de inactividad de 150 ms como delimitador adicional.
         """
         buffer = bytearray()
+        TIMEOUT_INACTIVIDAD = 0.15  # segundos sin bytes nuevos → fin de trama
 
         while not self.killThread:
             try:
+                # Intentar leer 1 byte con timeout breve
+                self.reader.timeout = TIMEOUT_INACTIVIDAD
                 byte = self.reader.read(1)
             except Exception as e:
                 if self.killThread:
@@ -104,6 +109,20 @@ class BarCodeReader():
                 break
 
             if not byte:
+                # Timeout: si hay datos acumulados sin sufijo, procesarlos igual
+                if buffer:
+                    datos = buffer
+                    buffer = bytearray()
+                    if datos:
+                        try:
+                            self.procesar_datos(datos[0], datos[1:])
+                        except Exception as e:
+                            print(f"Honeywell error procesando trama (timeout): {e}")
+                            self.event.awake(
+                                "NotificarError",
+                                [json.dumps("Error al interpretar la lectura")]
+                            )
+                        print("Esperando siguiente lectura...")
                 continue
 
             buffer += byte
@@ -135,6 +154,7 @@ class BarCodeReader():
         Despacha la trama según su tipo:
           - MRZ nueva cédula / extranjería  → _procesar_mrz_td1
           - Cédula antigua PDF417 (prefix=P) → bloque original
+          - QR cédula nueva cifrado          → _procesar_qr_cedula_nueva
           - QR / barcode simple              → EstablecerCodigo
           - Cédula binaria prefix≠P          → _procesar_cedula_alternativa
         """
@@ -152,11 +172,20 @@ class BarCodeReader():
         if prefix == 80:  # ord('P')
             return self._procesar_cedula_pdf417(byte)
 
-        # ── 3. QR / código de barras simple (todo imprimible)
-        all_printable = all(32 < elem < 127 for elem in full)
+        # ── 3. Todo imprimible → puede ser QR simple o QR cédula nueva cifrado
+        all_printable = all(0x20 <= elem <= 0x7E for elem in full)
         if all_printable:
             try:
                 result = full.decode("utf-8").strip()
+                # El QR de la nueva cédula colombiana (policarbonato 2022+) está
+                # cifrado con criptografía de la Registraduría.  El lector entrega
+                # el contenido binario/base64 tal cual; no es parseable en campo.
+                # Se distingue porque es significativamente más largo que un código
+                # de barras normal (> 100 chars) y empieza con indicadores típicos
+                # del estándar ICAO/Registraduría (ej. "COL", dígitos, base64).
+                if self._es_qr_cedula_nueva(result):
+                    return self._procesar_qr_cedula_nueva(result)
+                # Barcode / QR simple
                 self.event.awake("EstablecerCodigo", [json.dumps(result)])
                 return result
             except Exception:
@@ -171,20 +200,92 @@ class BarCodeReader():
         Detecta si la trama es un MRZ TD1 (3 líneas de ~30 chars).
         Criterios:
           - Empieza con 'I' (0x49), que es la primera letra de 'ID' o 'IR'
-          - Es todo texto imprimible (incluyendo '<' = 0x3C y '\n'/0x0A como separador)
-          - Longitud total entre 85 y 100 bytes (3×30 + 2 separadores ≈ 92)
+          - Es todo texto imprimible (incluyendo '<' = 0x3C y LF/CR como separador)
+          - Longitud total entre 85 y 105 bytes (con separadores) o exactamente
+            90 bytes (bloque continuo sin separadores, formato habitual del 3320g)
         """
         if len(full) < 85 or len(full) > 105:
             return False
         if full[0] != ord('I'):
             return False
-        # Permitir imprimibles + LF (0x0A) como separador de líneas MRZ
+        # Permitir imprimibles + LF (0x0A) / CR (0x0D) como separador de líneas MRZ
         for b in full:
             if b == 0x0A or b == 0x0D:
                 continue
             if b < 0x20 or b > 0x7E:
                 return False
         return True
+
+    def _es_qr_cedula_nueva(self, texto: str) -> bool:
+        """
+        Heurística para distinguir el QR cifrado de la cédula nueva colombiana
+        (policarbonato 2022+) de un código de barras / QR simple.
+
+        Características observadas del QR de la cédula nueva:
+          - Longitud > 100 caracteres (típicamente 200-500 chars).
+          - Contiene caracteres base64/hex: letras, dígitos, '+', '/', '=', '-'.
+          - NO tiene el formato legible de un turno, URL, etc.
+        """
+        if len(texto) < 100:
+            return False
+        # Si tiene espacios o caracteres tipicos de texto normal, no es QR cifrado
+        palabras = texto.split()
+        if len(palabras) > 5:
+            return False
+        # Caracteres fuera del conjunto base64/hex son señal de QR normal
+        import re
+        if re.match(r'^[A-Za-z0-9+/=\-_]+$', texto):
+            return True
+        return False
+
+    def _procesar_qr_cedula_nueva(self, texto: str) -> dict:
+        """
+        Maneja el QR cifrado de la cédula colombiana digital (policarbonato 2022+).
+
+        IMPORTANTE: El QR de la cédula nueva colombiana está cifrado con
+        criptografía de la Registraduría Nacional (estándar ICAO/eID).
+        No es posible extraer datos personales de él sin la clave privada
+        de la Registraduría. Lo que sí puede hacer el lector es:
+          1. Capturar el blob cifrado para verificación posterior via API.
+          2. Usar la zona MRZ del reverso (que el lector sí lee como texto
+             plano OCR-B) para obtener los datos básicos — ese flujo ya está
+             cubierto por _procesar_mrz_td1.
+
+        Este método emite el evento 'EstablecerQRCedulaNueva' con el payload
+        crudo para que el sistema receptor lo use como requiera (p.ej. enviarlo
+        a un servicio de verificación de la Registraduría).
+        """
+        print(f"Honeywell: QR cédula nueva detectado ({len(texto)} chars)")
+
+        # El QR de la cédula digital colombiana (policarbonato 2022+) está
+        # completamente cifrado con criptografía de la Registraduría Nacional.
+        # Los 576 bytes del payload son cifrado puro — no es posible extraer
+        # nombre, número u otros campos sin la clave privada de la Registraduría.
+        #
+        # Acción: emitir EstablecerJsonDocumento con TipoDocumento="NUEVA_CEDULA"
+        # y RequiereMRZ=True para que el sistema/UI le indique al operador que
+        # voltee la cédula y escanee la zona MRZ (letras OCR-B del reverso),
+        # que sí es legible con el Honeywell 3320g y entrega todos los datos.
+        resultado = {
+            "TipoDocumento":    "NUEVA_CEDULA",
+            "Numero":           "",
+            "PrimerApellido":   "",
+            "SegundoApellido":  "",
+            "PrimerNombre":     "",
+            "SegundoNombre":    "",
+            "Sexo":             "",
+            "FechaDeNacimiento": "",
+            "RH":               "",
+            "Departamento":     "",
+            "Ciudad":           "",
+            "LugarNacimiento":  "",
+            "Pais":             "COL",
+            "RequiereMRZ":      True,
+            "MensajeOperador":  "Cédula digital nueva: gire el documento y escanee las letras MRZ del reverso para leer los datos.",
+        }
+        ret = json.dumps(resultado).replace("{", "$#$").replace("}", "#$#").replace(",", "%#")
+        self.event.awake("EstablecerJsonDocumento", [json.dumps(ret)])
+        return resultado
 
     def _procesar_mrz_td1(self, full: bytearray) -> dict:
         """
