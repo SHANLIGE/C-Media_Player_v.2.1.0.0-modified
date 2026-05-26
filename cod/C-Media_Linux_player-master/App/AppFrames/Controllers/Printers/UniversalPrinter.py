@@ -148,10 +148,7 @@ class Printer():
                 lineas_lista[14],
             ])
 
-            # =========================
-            # FIX CRÍTICO DE IMPRESIÓN
-            # =========================
-
+        
             if hasattr(self.printer, "write"):
                 self.printer.write(tx)
                 
