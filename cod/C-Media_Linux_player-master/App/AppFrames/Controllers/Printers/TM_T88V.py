@@ -136,6 +136,7 @@ class Printer():
                 lineas_lista[12],
                 lineas_lista[13],
                 lineas_lista[14],
+              
             ])
 
             # =========================
