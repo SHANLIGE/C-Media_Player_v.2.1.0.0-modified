@@ -136,7 +136,6 @@ class Printer():
                 lineas_lista[12],
                 lineas_lista[13],
                 lineas_lista[14],
-              
             ])
 
             # =========================
@@ -453,7 +452,7 @@ class Printer():
                 mientras = self.Letras(line1)
                 for k in range(len(mientras)):
                     tx.append(mientras[k])
-            tx += bytearray([0x0A, 0x0A]) # salto de linea 
+            tx += bytearray([0x0A]) # salto de linea ---para que salga el logo solo uno 
     
         #endregion linea 1
         #region linea 2
@@ -492,8 +491,10 @@ class Printer():
                 mientras = self.Letras(line7)
                 for k in range(len(mientras)):
                     tx.append(mientras[k])
-        #endregion linea 7
-        tx += bytearray([0x0A, 0x0A, 0x0A]) #salto de linea
+        #endregion linea 7 ---- linea icetex 
+        tx += bytearray([0x0A]) #salto de linea
+        tx += bytearray([0x0A]) # salto de linea (SAT)
+        tx += bytearray([0x0A]) # salto de linea (SAT)
         tx += bytearray([0x0A]) # salto de linea (SAT)
         tx += bytearray([0x1B, 0x32]) # espacio entre lineas
         tx += bytearray([0x1D, 0x5C, 0x14, 0x00]) # posicion vertical relativa
@@ -509,7 +510,7 @@ class Printer():
                 for k in range(len(mientras1)): # número del turno
                     tx.append(mientras1[k])
         #endregion turno
-        tx += bytearray([0x0A]) # salto de linea
+        
         tx += bytearray([0x1B, 0x21, 0x08, 0x09]) # seleccionar modo de impresion 
 
     
@@ -705,6 +706,7 @@ class Printer():
 
         #endregion linea10
         tx += bytearray([0x0C])
+        tx += bytearray([0x0A, 0x09]) # salto de linea
         tx += bytearray([0x1D, 0x56, 0x01]) # cortar el papel
     
         return tx
@@ -721,13 +723,13 @@ class Printer():
         img =  cv2.imread(bitmap)
         height, width = img.shape[0:2]
         
-        if width > 110:
-            r = 110/width
-            img = cv2.resize(img,(110, int(height*r)), interpolation = cv2.INTER_AREA)
+        if width > 120:
+            r = 120/width
+            img = cv2.resize(img,(120, int(height*r)), interpolation = cv2.INTER_AREA)
             height, width = img.shape[0:2]
-        if height > 80:
-            r = 80/height
-            img = cv2.resize(img, (int(width*r), 80), interpolation = cv2.INTER_AREA)
+        if height > 90:
+            r = 90/height
+            img = cv2.resize(img, (int(width*r), 90), interpolation = cv2.INTER_AREA)
             height, width = img.shape[0:2]
         
         for row in range(height):
