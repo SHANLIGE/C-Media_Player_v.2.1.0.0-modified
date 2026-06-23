@@ -2,9 +2,6 @@ from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 from PySide6.QtGui import *
 
-#Clases Externas
-from .ToggleButton import ToggleButton
-
 #Otras librerías
 import json
 import os
