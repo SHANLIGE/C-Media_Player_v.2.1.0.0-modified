@@ -3,8 +3,21 @@ from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 from PySide6.QtGui import *
 
-
 import os
+
+# ---------------------------------------------------------------------------
+# Paleta de colores
+# ---------------------------------------------------------------------------
+COLOR_NARANJA = "#f99f04"
+COLOR_NARANJA_HOVER = "#ff8c00"
+COLOR_NARANJA_PRESSED = "#f99f04"
+COLOR_FONDO = "#FFFFFF"
+COLOR_INPUT_BG = "#F2F4F6"
+COLOR_BORDE = "#E4E6E9"
+COLOR_TEXTO = "#313336"
+COLOR_TEXTO_SUAVE = "#5B6066"
+COLOR_BACKGROUND = "#F2F4F6"
+
 
 class PrinterTabFrame(QWidget):
     def __init__(self):
@@ -13,64 +26,189 @@ class PrinterTabFrame(QWidget):
         self.path = ""
         self.get_settings()
 
-
-        #Seleccionar el fondo
+        # Fondo blanco
         bg = QPalette()
-        bg.setColor(QPalette.Window, "#dae7ef") #AR
+        bg.setColor(QPalette.Window, COLOR_FONDO)
         self.setAutoFillBackground(True)
         self.setPalette(bg)
 
-        #Configuracion del Layout
-        self.mainLayout = QGridLayout()
+        self.setStyleSheet(f"""
+            QWidget {{
+                color: {COLOR_TEXTO};
+                font-family: "Segoe UI", "Noto Sans", sans-serif;
+                font-size: 13px;
+            }}
+            QLineEdit, QSpinBox, QComboBox {{
+                background-color: {COLOR_INPUT_BG};
+                border: 1px solid {COLOR_BORDE};
+                border-radius: 8px;
+                padding: 8px 10px;
+            }}
+            QComboBox::drop-down {{
+                border: none;
+                width: 28px;
+            }}
+            QComboBox::down-arrow {{
+                width: 12px;
+                height: 12px;
+            }}
+            QComboBox QAbstractItemView {{
+                background-color: white;
+                border: 1px solid {COLOR_BORDE};
+                border-radius: 6px;
+                selection-background-color: {COLOR_NARANJA};
+                selection-color: white;
+            }}
+            QLineEdit:read-only {{
+                color: {COLOR_TEXTO_SUAVE};
+            }}
+            QFrame#separador {{
+                background-color: {COLOR_BORDE};
+                max-height: 1px;
+                min-height: 1px;
+            }}
+            QLabel#tituloSeccion {{
+                font-weight: 600;
+                font-size: 14px;
+            }}
+            QLabel#cajaIcono {{
+                background-color: {COLOR_BACKGROUND};
+                border: 1px solid {COLOR_BORDE};
+                border-radius: 5px;
+                color: {COLOR_NARANJA};
+                font-size: 16px;
+                font-weight: bold;
+            }}
+        """)
+
+        # Layout principal vertical
+        self.mainLayout = QVBoxLayout()
+        self.mainLayout.setContentsMargins(20, 18, 20, 18)
+        self.mainLayout.setSpacing(14)
         self.setLayout(self.mainLayout)
 
-        #Fila1
-        self.path_label = QLabel("Logo")
-        self.mainLayout.addWidget(self.path_label, 0, 0, 1, 1)
-        self.path_label.setFixedHeight(50)
-        self.path_entry = QLineEdit(self.path)
-        self.mainLayout.addWidget(self.path_entry, 0, 1, 1, 4)
-        self.file_name_button = QPushButton("Cargar")
-        self.file_name_button.clicked.connect(self.select_file)
-        self.mainLayout.addWidget(self.file_name_button, 0, 5)
-        self.file_name_button.setStyleSheet("background-color : rgb(88, 102, 108); padding: 6px; border-radius: 3px;color: white")
+        # ------------------------------------------------------------------
+        # Fila 1: Logo (ruta del archivo)
+        # ------------------------------------------------------------------
+        titulo_logo = QLabel("Logo")
+        titulo_logo.setObjectName("tituloSeccion")
+        self.mainLayout.addWidget(titulo_logo)
 
-        #Fila2
+        fila_logo_path = QHBoxLayout()
+        fila_logo_path.setSpacing(12)
+
+        self.path_entry = QLineEdit(self.path)
+        self.path_entry.setMinimumHeight(38)
+        fila_logo_path.addWidget(self.path_entry, stretch=1)
+
+        self.file_name_button = self._crear_boton("📁  Cargar")
+        self.file_name_button.clicked.connect(self.select_file)
+        fila_logo_path.addWidget(self.file_name_button)
+
+        self.mainLayout.addLayout(fila_logo_path)
+        self.mainLayout.addWidget(self._crear_separador())
+
+        # ------------------------------------------------------------------
+        # Fila 2: Impresora (combobox)
+        # ------------------------------------------------------------------
+        fila_impresora = QHBoxLayout()
+        fila_impresora.setSpacing(10)
+
+        fila_impresora.addWidget(self._crear_caja_icono("🖨"))
+
+        impresora_label = QLabel("Impresora")
+        impresora_label.setMinimumWidth(80)
+        fila_impresora.addWidget(impresora_label)
+
         self.printers = ["UniversalPrinter"]
-        self.printer_label = QLabel("Impresora")
-        self.mainLayout.addWidget(self.printer_label, 1, 0, 1, 1)
-        self.path_label.setFixedHeight(50)
         self.combo_box_printer = QComboBox()
         self.combo_box_printer.addItems(self.printers)
         self.combo_box_printer.setCurrentIndex(self.index)
-        self.mainLayout.addWidget(self.combo_box_printer, 1, 1, 1, 5)
-        self.combo_box_printer.setStyleSheet("color : black; background-color : white; selection-background-color: rgb(88, 102, 108);") 
+        self.combo_box_printer.setMinimumHeight(38)
+        fila_impresora.addWidget(self.combo_box_printer, stretch=1)
 
-        #Fila3
-        self.save_button = QPushButton("Guardar")
+        self.mainLayout.addLayout(fila_impresora)
+        self.mainLayout.addWidget(self._crear_separador())
+
+        # ------------------------------------------------------------------
+        # Guardar centrado
+        # ------------------------------------------------------------------
+        self.save_button = self._crear_boton("💾  Guardar")
         self.save_button.clicked.connect(self.save_settings)
-        self.mainLayout.addWidget(self.save_button, 2, 2, 1, 2) 
-        self.save_button.setStyleSheet("QPushButton{background-color : rgb(88, 102, 108); padding: 6px; border-radius: 3px;color: white}   QPushButton::pressed{background-color : rgb(62, 72, 77); padding: 6px; border-radius: 3px;color: white}") # 58666c 
+        self.save_button.setMinimumWidth(260)
 
-        #Imagen 
-        img =  QLabel()
-        path = os.path.expanduser('~')+"/.config/Ciel/C-Media_Player/Media/LOGO-CMedia.png"
-        pixmap = QPixmap(path)
+        fila_guardar = QHBoxLayout()
+        fila_guardar.addStretch(1)
+        fila_guardar.addWidget(self.save_button)
+        fila_guardar.addStretch(1)
+
+        # ------------------------------------------------------------------
+        # Logo marca de agua a la derecha
+        # ------------------------------------------------------------------
+        img = QLabel()
+        logo_path = os.path.expanduser('~') + "/.config/Ciel/C-Media_Player/Media/LOGO-CMedia.png"
+        pixmap = QPixmap(logo_path)
+        if not pixmap.isNull():
+            pixmap = pixmap.scaledToWidth(110, Qt.SmoothTransformation)
         img.setPixmap(pixmap)
+        opacidad = QGraphicsOpacityEffect(img)
+        opacidad.setOpacity(0.18)
+        img.setGraphicsEffect(opacidad)
 
-        self.mainLayout.addWidget(img, 2, 5, 1, 1, Qt.AlignRight | Qt.AlignBottom)
+        fila_marca = QHBoxLayout()
+        fila_marca.addStretch(1)
+        fila_marca.addWidget(img, alignment=Qt.AlignRight | Qt.AlignBottom)
 
+        self.mainLayout.addStretch(1)
+        self.mainLayout.addLayout(fila_guardar)
+        self.mainLayout.addLayout(fila_marca)
 
+    # -----------------------------------------------------------------
+    # Helpers visuales
+    # -----------------------------------------------------------------
+    def _crear_boton(self, texto):
+        boton = QPushButton(texto)
+        boton.setCursor(Qt.PointingHandCursor)
+        boton.setMinimumHeight(40)
+        boton.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {COLOR_NARANJA};
+                color: white;
+                padding: 8px 18px;
+                border-radius: 9px;
+                font-weight: 600;
+            }}
+            QPushButton:hover {{
+                background-color: {COLOR_NARANJA_HOVER};
+            }}
+            QPushButton:pressed {{
+                background-color: {COLOR_NARANJA_PRESSED};
+            }}
+        """)
+        return boton
+
+    def _crear_separador(self):
+        linea = QFrame()
+        linea.setObjectName("separador")
+        linea.setFrameShape(QFrame.HLine)
+        return linea
+
+    def _crear_caja_icono(self, caracter):
+        caja = QLabel(caracter)
+        caja.setObjectName("cajaIcono")
+        caja.setFixedSize(36, 36)
+        caja.setAlignment(Qt.AlignCenter)
+        return caja
+
+    # -----------------------------------------------------------------
+    # Logica original (sin cambios)
+    # -----------------------------------------------------------------
     def get_settings(self):
-        """
-        Obtiene la configuracion del archivo json y las guarda en un atributo de la clase
-        """
-
-        path = os.path.expanduser('~')+"/.config/Ciel/C-Media_Player/configs/config.json"
+        path = os.path.expanduser('~') + "/.config/Ciel/C-Media_Player/configs/config.json"
         with open(path, "r") as file:
             settings = json.loads(file.read())
         if "$" == settings["Ruta"][0]:
-            var =  os.environ[settings["Ruta"][1:settings["Ruta"].find("/")]]
+            var = os.environ[settings["Ruta"][1:settings["Ruta"].find("/")]]
             path = var + settings["Ruta"][settings["Ruta"].find("/"):]
         else:
             path = settings["Ruta"]
@@ -81,15 +219,15 @@ class PrinterTabFrame(QWidget):
                     if "Control.Impresion.dll" in controller["NombreArchivo"]:
                         self.setEnabled(True)
                         self.path = controller["ObjetoBase"]["RutaLogo"]["Path"]
-                        self.index = controller["ObjetoBase"]["TipoImpresora"] 
+                        self.index = controller["ObjetoBase"]["TipoImpresora"]
 
     def save_settings(self):
-        path = os.path.expanduser('~')+"/.config/Ciel/C-Media_Player/configs/config.json"
+        path = os.path.expanduser('~') + "/.config/Ciel/C-Media_Player/configs/config.json"
         with open(path, "r") as file:
             settings = json.loads(file.read())
 
         if "$" == settings["Ruta"][0]:
-            var =  os.environ[settings["Ruta"][1:settings["Ruta"].find("/")]]
+            var = os.environ[settings["Ruta"][1:settings["Ruta"].find("/")]]
             path = var + settings["Ruta"][settings["Ruta"].find("/"):]
         else:
             path = settings["Ruta"]
@@ -100,16 +238,13 @@ class PrinterTabFrame(QWidget):
                     if "Control.Impresion.dll" in settings["Pantallas"][pantalla]["Controles"][controller]["NombreArchivo"]:
                         settings["Pantallas"][pantalla]["Controles"][controller]["ObjetoBase"]["RutaLogo"]["Path"] = self.path_entry.text()
                         settings["Pantallas"][pantalla]["Controles"][controller]["ObjetoBase"]["TipoImpresora"] = self.combo_box_printer.currentIndex()
-        
+
         with open(path, "w", encoding="utf-8-sig") as file:
             file.write(json.dumps(settings))
 
     def select_file(self):
-        """
-        Abre un cuadro de dialogo para la seleccion del archivo de configuracion ccmj y lo guarda en la variable
-        """
         file_name = QFileDialog().getOpenFileName(self, "Seleccionar Archivo", filter="Config files (*bmp)")[0]
         if file_name != "":
             self.file_name = file_name
             self.path_entry.clear()
-            self.path_entry.insert(file_name)
+            self.path_entry.insert(file_name) 

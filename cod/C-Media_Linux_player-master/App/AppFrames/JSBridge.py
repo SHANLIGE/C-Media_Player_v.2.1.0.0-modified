@@ -195,7 +195,7 @@ class JSBridge(QtCore.QObject):
                 
         window.speechSynthesis.cancel = function(){
         	queue = [];
-        	window.api.speech.cancel_speech();
+        	window.api.speech.cancel_speech();9
         }
 	
 
