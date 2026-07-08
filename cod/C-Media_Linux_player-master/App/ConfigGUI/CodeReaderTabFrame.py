@@ -60,7 +60,7 @@ class CodeReaderTabFrame(QWidget):
                 selection-color: white;
             }}
             QFrame#separador {{
-                background-color: {COLOR_BORDE};
+                color: {COLOR_BORDE};
                 max-height: 1px;
                 min-height: 1px;
             }}
@@ -90,7 +90,7 @@ class CodeReaderTabFrame(QWidget):
         fila_lector = QHBoxLayout()
         fila_lector.setSpacing(10)
 
-        fila_lector.addWidget(self._crear_caja_icono("📷"))
+        fila_lector.addWidget(self._crear_caja_icono("🗏"))
 
         lector_label = QLabel("Lector")
         lector_label.setMinimumWidth(80)
@@ -104,22 +104,12 @@ class CodeReaderTabFrame(QWidget):
 
         self.mainLayout.addLayout(fila_lector)
         self.mainLayout.addWidget(self._crear_separador())
-
-        # ------------------------------------------------------------------
-        # Guardar centrado
-        # ------------------------------------------------------------------
-        self.save_button = self._crear_boton("💾  Guardar")
-        self.save_button.clicked.connect(self.save_settings)
-        self.save_button.setMinimumWidth(260)
-
-        fila_guardar = QHBoxLayout()
-        fila_guardar.addStretch(1)
-        fila_guardar.addWidget(self.save_button)
-        fila_guardar.addStretch(1)
-
+        self.mainLayout.addStretch(1)
+       
         # ------------------------------------------------------------------
         # Logo marca de agua a la derecha
         # ------------------------------------------------------------------
+        
         img = QLabel()
         logo_path = os.path.expanduser('~') + "/.config/Ciel/C-Media_Player/Media/LOGO-CMedia.png"
         pixmap = QPixmap(logo_path)
@@ -131,12 +121,27 @@ class CodeReaderTabFrame(QWidget):
         img.setGraphicsEffect(opacidad)
 
         fila_marca = QHBoxLayout()
-        fila_marca.addStretch(1)
+       
         fila_marca.addWidget(img, alignment=Qt.AlignRight | Qt.AlignBottom)
+        self.mainLayout.addLayout(fila_marca)
 
+        # ------------------------------------------------------------------
+        # Guardar centrado
+        # ------------------------------------------------------------------
+        self.save_button = self._crear_boton("Guardar")
+        self.save_button.clicked.connect(self.save_settings)
+        self.save_button.setMinimumWidth(260)
+
+        fila_guardar = QHBoxLayout()
+        fila_guardar.addStretch(1)
+        fila_guardar.addWidget(self.save_button)
+        fila_guardar.addStretch(1)
+
+       
         self.mainLayout.addStretch(1)
         self.mainLayout.addLayout(fila_guardar)
-        self.mainLayout.addLayout(fila_marca)
+        self.mainLayout.addStretch(1)
+
 
     # -----------------------------------------------------------------
     # Helpers visuales
@@ -150,7 +155,7 @@ class CodeReaderTabFrame(QWidget):
                 background-color: {COLOR_NARANJA};
                 color: white;
                 padding: 8px 18px;
-                border-radius: 9px;
+                border-radius: 6px;
                 font-weight: 600;
             }}
             QPushButton:hover {{

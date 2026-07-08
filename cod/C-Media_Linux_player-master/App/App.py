@@ -2,6 +2,7 @@
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 from PySide6.QtGui import *
+from .ConfigGUI.TitleBar import TitleBar
 
 #Otras librerias 
 import sys
@@ -9,6 +10,10 @@ import logging
 import os
 
 import traceback, sys
+
+
+
+
 
 def excepthook(exc_type, exc_value, exc_tb):
     traceback.print_exception(exc_type, exc_value, exc_tb)
@@ -40,20 +45,29 @@ logging.basicConfig(filename=os.path.expanduser('~')+"/.config/Ciel/C-Media_Play
 
 #Creacion aplicacion
 os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--disable-pinch"
+
 QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
+QCoreApplication.setAttribute(Qt.AA_UseHighDpiPixmaps)
+QCoreApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
+
 root = QApplication()
-QCoreApplication.setApplicationName("C-Media Player Lx")
+QCoreApplication.setApplicationName("C-Media Player")
+
+
+
+
 #Creacion del SplashScreen
 pixmap = QPixmap(os.path.expanduser('~')+"/.config/Ciel/C-Media_Player/Media/SplashScreen.png")
 splash = QSplashScreen(pixmap)
 splash.show()
 root.processEvents()
 
-    
+
 #Iniciacion
 if len(argv) == 1:
     try:
         player = Player(debug)
+
         splash.finish(player)
         player.show()
 
@@ -84,3 +98,5 @@ else:
 root.lastWindowClosed.connect(root.quit)
 #Fin de  la aplicacion
 sys.exit(root.exec())
+
+

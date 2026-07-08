@@ -1,12 +1,21 @@
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 from PySide6.QtGui import *
-
+from PySide6.QtWidgets import QApplication, QLabel, QLineEdit, QCheckBox, QPushButton, QVBoxLayout, QHBoxLayout, QGridLayout, QTabWidget, QWidget, QFrame
 from .CodeReaderTabFrame import CodeReaderTabFrame
 from .GeneralTabFrame import GeneralTabFrame
 from .WebTabFrame import WebTabFrame
 from .PrinterTabFrame import PrinterTabFrame
+from .TitleBar import TitleBar
 import os
+
+
+
+COLOR_NARANJA = "#f99f04"
+COLOR_NARANJA_HOVER = "#ff8c00"
+COLOR_NARANJA_PRESSED = "#f99f04"
+
+
 
 class MainFrame(QWidget):
     """
@@ -21,21 +30,59 @@ class MainFrame(QWidget):
         path = os.path.expanduser('~')+"/.config/Ciel/C-Media_Player/Media/Logo-CMedia_C.png"
         icon.addFile(path, QSize(), QIcon.Normal, QIcon.Off)
         self.setWindowIcon(icon)
-        #Nombre de la Aplicacion
-        self.setWindowTitle("C-Media Player Lx - Configuración")
+        #Nombre de la Aplicacionclass MainWindow(QMainWindow):
+
+        
+        self.setWindowTitle("C-Media Player Lx · Configuración")
         self.setMinimumSize(800, 500)
         self.setMaximumSize(800, 500)
-        QCoreApplication.setApplicationName("C-Media Player Lx - Configuration")
-        #Background
+        QCoreApplication.setApplicationName("C-Media Player Lx · Configuration")
+
+
+        self.setWindowFlags(Qt.FramelessWindowHint)
+        
+        self.TitleBar = TitleBar(self)
+        self.TitleBar.setGeometry(0, 0, self.width(), 36)
+        self.TitleBar.show()
+        self.TitleBar.raise_()
+      
+
+        #Background color
         bg = QPalette()
         bg.setColor(QPalette.Window, "#dae7ef") #AR
         self.setAutoFillBackground(True)
         self.setPalette(bg)
+
+        self.setStyleSheet(f""" 
+            QWidget {{
+                color: #58666c;
+                font-family: "Segoe UI", "Noto Sans", sans-serif;
+                font-size: 13px; 
+                background-color: #ffffff;
+            }}    
+          
+            QTabWidget::pane {{
+                border: 1.2px solid #e4e6e9;
+            }} 
+            QTabBar::tab {{
+                background-color: #ffffff;
+                padding: 8px 20px;
+                font-size: 14px;
+            
+            }}
+            QTabBar::tab:selected {{
+                font-weight: bold;
+                color: {COLOR_NARANJA};
+                border-bottom: 2.5px solid {COLOR_NARANJA};
+            }}           
+        """)
         
+
         #Set Layout
         self.mainLayout = QGridLayout()
-        self.mainLayout.setContentsMargins(15, 15, 15, 15)
+        self.mainLayout.setContentsMargins(15, 36, 15, 15)
         self.setLayout(self.mainLayout)
+        
 
         #TabFrame
         self.tabWidget = QTabWidget(self)
@@ -43,10 +90,10 @@ class MainFrame(QWidget):
         self.webTab = WebTabFrame()
         self.printerTab = PrinterTabFrame()
         self.readerTab = CodeReaderTabFrame()
-        self.tabWidget.addTab(self.generalTab, "General")
-        self.tabWidget.addTab(self.webTab, "Contenedor Web")
-        self.tabWidget.addTab(self.printerTab, "Impresora")
-        self.tabWidget.addTab(self.readerTab, "Lector")
+        self.tabWidget.addTab(self.generalTab, "⛭  General")
+        self.tabWidget.addTab(self.webTab, "⌬  Contenedor Web")
+        self.tabWidget.addTab(self.printerTab, "🖶  Impresora")
+        self.tabWidget.addTab(self.readerTab, "🗏  Lector")
         self.mainLayout.addWidget(self.tabWidget)
         
         palette = QPalette() # PANTONE

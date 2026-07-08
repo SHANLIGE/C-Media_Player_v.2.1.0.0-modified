@@ -66,9 +66,10 @@ class WebTabFrame(QWidget):
             QCheckBox::indicator:checked {{
                 background-color: {COLOR_NARANJA};
                 border: 2px solid {COLOR_NARANJA};
+                image: url({os.path.expanduser('~')}/.config/Ciel/C-Media_Player/images/check-solid-full.svg);
             }}
             QFrame#separador {{
-                background-color: {COLOR_BORDE};
+                color: {COLOR_BORDE};
                 max-height: 1px;
                 min-height: 1px;
             }}
@@ -114,16 +115,36 @@ class WebTabFrame(QWidget):
         self.nav_bar_button = QCheckBox()
         self.nav_bar_button.setChecked(self.nav_bar)
         # self.nav_bar_button.toggled.connect(self.funcionnb)  # CAMBIAR FUNCION
-        fila_navbar.addLayout(self._crear_fila_opcion("🌐", "Barra de Navegación", self.nav_bar_button))
+        fila_navbar.addLayout(self._crear_fila_opcion("⌬", "Barra de Navegación", self.nav_bar_button))
         fila_navbar.addStretch(1)
 
         self.mainLayout.addLayout(fila_navbar)
         self.mainLayout.addWidget(self._crear_separador())
+        self.mainLayout.addStretch(1)
+        
+        # ------------------------------------------------------------------
+        # Logo marca de agua a la derecha
+        # ------------------------------------------------------------------
+        
+        img = QLabel()
+        logo_path = os.path.expanduser('~') + "/.config/Ciel/C-Media_Player/Media/LOGO-CMedia.png"
+        pixmap = QPixmap(logo_path)
+        if not pixmap.isNull():
+            pixmap = pixmap.scaledToWidth(110, Qt.SmoothTransformation)
+        img.setPixmap(pixmap)
+        opacidad = QGraphicsOpacityEffect(img)
+        opacidad.setOpacity(0.18)
+        img.setGraphicsEffect(opacidad)
+
+        fila_marca = QHBoxLayout()
+       
+        fila_marca.addWidget(img, alignment=Qt.AlignRight | Qt.AlignBottom)
+        self.mainLayout.addLayout(fila_marca)
 
         # ------------------------------------------------------------------
-        # Fila 3: Guardar centrado
+        # Guardar centrado
         # ------------------------------------------------------------------
-        self.save_button = self._crear_boton("💾  Guardar")
+        self.save_button = self._crear_boton("Guardar")
         self.save_button.clicked.connect(self.save_settings)
         self.save_button.setMinimumWidth(260)
 
@@ -132,33 +153,18 @@ class WebTabFrame(QWidget):
         fila_guardar.addWidget(self.save_button)
         fila_guardar.addStretch(1)
 
-        # ------------------------------------------------------------------
-        # Fila 4: Logo a la derecha (igual que GeneralTabFrame)
-        # ------------------------------------------------------------------
-        img = QLabel()
-        path = os.path.expanduser('~') + "/.config/Ciel/C-Media_Player/Media/LOGO-CMedia.png"
-        pixmap = QPixmap(path)
-        if not pixmap.isNull():
-            pixmap = pixmap.scaledToWidth(110, Qt.SmoothTransformation)
-        img.setPixmap(pixmap)
-        opacidad = QGraphicsOpacityEffect(img)
-        opacidad.setOpacity(0.18)
-        img.setGraphicsEffect(opacidad)
-
-        fila_logo = QHBoxLayout()
-        fila_logo.addStretch(1)
-        fila_logo.addWidget(img, alignment=Qt.AlignRight | Qt.AlignBottom)
-
+       
         self.mainLayout.addStretch(1)
         self.mainLayout.addLayout(fila_guardar)
-        self.mainLayout.addLayout(fila_logo)
+        self.mainLayout.addStretch(1)
+
 
     # -----------------------------------------------------------------
     # Helpers visuales
     # -----------------------------------------------------------------
     def _crear_boton(self, texto):
         """
-        Crea un boton con el estilo naranja redondeado
+        Crea el boton 
         """
         boton = QPushButton(texto)
         boton.setCursor(Qt.PointingHandCursor)
@@ -168,7 +174,7 @@ class WebTabFrame(QWidget):
                 background-color: {COLOR_NARANJA};
                 color: white;
                 padding: 8px 18px;
-                border-radius: 9px;
+                border-radius: 6px;
                 font-weight: 600;
             }}
             QPushButton:hover {{

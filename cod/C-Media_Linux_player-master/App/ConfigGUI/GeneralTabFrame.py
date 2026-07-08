@@ -2,7 +2,7 @@ from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 from PySide6.QtGui import *
 
-#Clases Externas
+#Clases Externasfila_
 #from .ToggleButton import ToggleButton
 
 #Otras librerias
@@ -91,9 +91,10 @@ class GeneralTabFrame(QWidget):
             QCheckBox::indicator:checked {{
                 background-color: {COLOR_NARANJA};
                 border: 2px solid {COLOR_NARANJA};
+                image: url({os.path.expanduser('~')}/.config/Ciel/C-Media_Player/images/check-solid-full.svg);
             }}
             QFrame#separador {{
-                background-color: {COLOR_BORDE};
+                color: {COLOR_BORDE};
                 max-height: 1px;
                 min-height: 1px;
             }}
@@ -132,7 +133,7 @@ class GeneralTabFrame(QWidget):
         self.file_name_entry.setMinimumHeight(38)
         fila_archivo.addWidget(self.file_name_entry, stretch=1)
 
-        self.file_name_button = self._crear_boton("📁  Cargar")
+        self.file_name_button = self._crear_boton("🗁 Cargar")
         self.file_name_button.clicked.connect(self.select_file)
         fila_archivo.addWidget(self.file_name_button)
 
@@ -184,9 +185,11 @@ class GeneralTabFrame(QWidget):
         self.left_entry = self._crear_spinbox(self.l)
         columna_der.addLayout(self._crear_fila_valor("←", "Izquierda", self.left_entry))
 
+        self.mainLayout.addStretch(1)
+
         fila_dimensiones.addLayout(columna_izq)
         fila_dimensiones.addLayout(columna_der)
-        fila_dimensiones.addStretch(1)
+       
 
         #Imagen / logo (esquina inferior derecha, como en la referencia)
         img = QLabel()
@@ -201,21 +204,35 @@ class GeneralTabFrame(QWidget):
         fila_dimensiones.addWidget(img, alignment=Qt.AlignRight | Qt.AlignBottom)
 
         self.mainLayout.addLayout(fila_dimensiones)
-        self.mainLayout.addStretch(1)
-
+     
+        
         # ------------------------------------------------------------------
         # Fila 4: Guardar
         # ------------------------------------------------------------------
-        self.save_button = self._crear_boton("💾  Guardar")
+     
+        self.save_button = self._crear_boton("Guardar")
         self.save_button.clicked.connect(self.save)
         self.mainLayout.addWidget(self.save_button)
+        self.save_button.setMinimumWidth(260)
+        
+
+
+
+
+        fila_guardar = QHBoxLayout()
+        fila_guardar.addStretch(1)
+        fila_guardar.addWidget(self.save_button)
+        fila_guardar.addStretch(1)
+        self.mainLayout.addStretch(1)
+        self.mainLayout.addLayout(fila_guardar)
+        self.mainLayout.addStretch(1)
 
     # -----------------------------------------------------------------
     # Helpers visuales
     # -----------------------------------------------------------------
     def _crear_boton(self, texto):
         """
-        Crea un boton con el estilo naranja redondeado de la referencia
+        Crea el boton
         """
         boton = QPushButton(texto)
         boton.setCursor(Qt.PointingHandCursor)
@@ -225,7 +242,7 @@ class GeneralTabFrame(QWidget):
                 background-color: {COLOR_NARANJA};
                 color: white;
                 padding: 8px 18px;
-                border-radius: 9px;
+                border-radius: 6px;
                 font-weight: 600;
             }}
             QPushButton:hover {{
@@ -233,12 +250,12 @@ class GeneralTabFrame(QWidget):
             }}
             QPushButton:pressed {{
                 background-color: {COLOR_NARANJA_PRESSED};
-            }}
+          fila_  }}
         """)
         return boton
 
     def _crear_separador(self):
-        """
+        """◎
         Linea horizontal divisoria entre secciones
         """
         linea = QFrame()
