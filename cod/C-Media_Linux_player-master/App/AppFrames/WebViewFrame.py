@@ -78,9 +78,9 @@ class WebViewFrame(QWidget):
         self.nav_bar = None
         
         #Eliminar para producción
-        """
+        
         self.view.page().certificateError.connect(self.on_cert_error)
-        """
+      
         #Eliminar para producción
 
 
@@ -102,20 +102,20 @@ class WebViewFrame(QWidget):
         self.view.loadFinished.connect(self.on_load_finished)
 
     #Eliminar para producción
-    """
+    
     def on_cert_error(self, e):
        print("Error en el certificado")
        e.acceptCertificate()
-    """
+  
     #Eliminar para producción
     
 
     #Añadir para producción
-    
+    '''
     def on_cert_error(self, e):
        print(f"Error SSL: {e.errorDescription()} en {e.url().toString()}")
        return False
-    
+    '''
     #Añadir para producción
 
 
