@@ -2,6 +2,7 @@ from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 from PySide6.QtGui import *
 
+
 #Clases Externasfila_
 #from .ToggleButton import ToggleButton
 
@@ -133,7 +134,15 @@ class GeneralTabFrame(QWidget):
         self.file_name_entry.setMinimumHeight(38)
         fila_archivo.addWidget(self.file_name_entry, stretch=1)
 
-        self.file_name_button = self._crear_boton("🗁 Cargar")
+        self.file_name_button = self._crear_boton("Cargar")
+
+        self.file_name_button.setIcon(
+            QIcon(os.path.expanduser("~") +
+                "/.config/Ciel/C-Media_Player/images/folder_open_24dp_FFFFFF_FILL0_wght400_GRAD-25_opsz24.svg")
+        )
+        self.file_name_button.setIconSize(QSize(16, 16))
+
+
         self.file_name_button.clicked.connect(self.select_file)
         fila_archivo.addWidget(self.file_name_button)
 
@@ -227,6 +236,9 @@ class GeneralTabFrame(QWidget):
         self.mainLayout.addLayout(fila_guardar)
         self.mainLayout.addStretch(1)
 
+
+
+
     # -----------------------------------------------------------------
     # Helpers visuales
     # -----------------------------------------------------------------
@@ -252,16 +264,36 @@ class GeneralTabFrame(QWidget):
                 background-color: {COLOR_NARANJA_PRESSED};
           fila_  }}
         """)
+
         return boton
 
     def _crear_separador(self):
-        """◎
+        """
         Linea horizontal divisoria entre secciones
         """
         linea = QFrame()
         linea.setObjectName("separador")
         linea.setFrameShape(QFrame.HLine)
         return linea
+    
+    def _crear_caja_icon(self, icono):
+        """
+        Caja cuadrada con icono (texto unicode) en naranja suave, como en la referencia
+        """
+        caja = QLabel()
+        caja.setObjectName("cajaIcono")
+        caja.setFixedSize(36, 36)
+        caja.setAlignment(Qt.AlignCenter)
+        pixmap = QPixmap(icono)
+        if not pixmap.isNull():
+            caja.setPixmap(
+                pixmap.scaled(
+                    20, 20,
+                    Qt.KeepAspectRatio,
+                    Qt.SmoothTransformation
+                )
+            )
+        return caja
 
     def _crear_caja_icono(self, caracter):
         """

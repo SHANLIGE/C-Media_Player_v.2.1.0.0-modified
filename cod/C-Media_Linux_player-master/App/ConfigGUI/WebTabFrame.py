@@ -115,7 +115,9 @@ class WebTabFrame(QWidget):
         self.nav_bar_button = QCheckBox()
         self.nav_bar_button.setChecked(self.nav_bar)
         # self.nav_bar_button.toggled.connect(self.funcionnb)  # CAMBIAR FUNCION
-        fila_navbar.addLayout(self._crear_fila_opcion("⌬", "Barra de Navegación", self.nav_bar_button))
+        fila_navbar.addLayout(self._crear_fila_opcion( 
+            os.path.expanduser("~") + "/.config/Ciel/C-Media_Player/images/language_24dp_F99F04_FILL0_wght400_GRAD0_opsz24.svg", 
+            "Barra de Navegación", self.nav_bar_button))
         fila_navbar.addStretch(1)
 
         self.mainLayout.addLayout(fila_navbar)
@@ -195,23 +197,35 @@ class WebTabFrame(QWidget):
         linea.setFrameShape(QFrame.HLine)
         return linea
 
-    def _crear_caja_icono(self, caracter):
+    def _crear_caja_icono(self, icono):
         """
         Caja cuadrada con icono unicode en naranja suave
         """
-        caja = QLabel(caracter)
+        caja = QLabel()
         caja.setObjectName("cajaIcono")
         caja.setFixedSize(36, 36)
         caja.setAlignment(Qt.AlignCenter)
+
+        pixmap = QPixmap(icono)
+        if not pixmap.isNull():
+            caja.setPixmap(
+                pixmap.scaled(
+                    20, 20,
+                    Qt.KeepAspectRatio,
+                    Qt.SmoothTransformation
+                )
+            )
+
+
         return caja
 
-    def _crear_fila_opcion(self, caracter, texto, checkbox):
+    def _crear_fila_opcion(self, icono, texto, checkbox):
         """
         Fila: caja de icono + etiqueta + checkbox
         """
         layout = QHBoxLayout()
         layout.setSpacing(10)
-        layout.addWidget(self._crear_caja_icono(caracter))
+        layout.addWidget(self._crear_caja_icono(icono))
         layout.addWidget(QLabel(texto))
         layout.addSpacing(6)
         layout.addWidget(checkbox)

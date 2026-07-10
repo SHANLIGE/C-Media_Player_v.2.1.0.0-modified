@@ -90,7 +90,7 @@ class CodeReaderTabFrame(QWidget):
         fila_lector = QHBoxLayout()
         fila_lector.setSpacing(10)
 
-        fila_lector.addWidget(self._crear_caja_icono("🗏"))
+        fila_lector.addWidget(self._crear_caja_icono(os.path.expanduser("~") + "/.config/Ciel/C-Media_Player/images/scan_24dp_F99F04_FILL0_wght400_GRAD-25_opsz24.svg"))
 
         lector_label = QLabel("Lector")
         lector_label.setMinimumWidth(80)
@@ -173,11 +173,23 @@ class CodeReaderTabFrame(QWidget):
         linea.setFrameShape(QFrame.HLine)
         return linea
 
-    def _crear_caja_icono(self, caracter):
-        caja = QLabel(caracter)
+    def _crear_caja_icono(self, icono):
+        caja = QLabel()
         caja.setObjectName("cajaIcono")
         caja.setFixedSize(36, 36)
         caja.setAlignment(Qt.AlignCenter)
+
+        pixmap = QPixmap(icono)
+        if not pixmap.isNull():
+            caja.setPixmap(
+                pixmap.scaled(
+                    20, 20,
+                    Qt.KeepAspectRatio,
+                    Qt.SmoothTransformation
+                )
+            )
+
+
         return caja
 
     # -----------------------------------------------------------------

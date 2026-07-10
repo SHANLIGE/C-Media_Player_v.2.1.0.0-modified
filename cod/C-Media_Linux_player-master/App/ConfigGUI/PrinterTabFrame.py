@@ -103,7 +103,14 @@ class PrinterTabFrame(QWidget):
         self.path_entry.setReadOnly(True)
         fila_logo_path.addWidget(self.path_entry, stretch=1)
 
-        self.file_name_button = self._crear_boton("🗁 Cargar")
+        self.file_name_button = self._crear_boton("Cargar")
+
+        self.file_name_button.setIcon(
+            QIcon(os.path.expanduser("~") +
+                "/.config/Ciel/C-Media_Player/images/folder_open_24dp_FFFFFF_FILL0_wght400_GRAD-25_opsz24.svg")
+        )
+        self.file_name_button.setIconSize(QSize(16, 16))
+
         self.file_name_button.clicked.connect(self.select_file)
         fila_logo_path.addWidget(self.file_name_button)
 
@@ -116,7 +123,11 @@ class PrinterTabFrame(QWidget):
         fila_impresora = QHBoxLayout()
         fila_impresora.setSpacing(10)
 
-        fila_impresora.addWidget(self._crear_caja_icono("🖶"))
+        fila_impresora.addWidget(
+            self._crear_caja_icono(
+                os.path.expanduser("~") + "/.config/Ciel/C-Media_Player/images/print_24dp_F99F04_FILL0_wght400_GRAD-25_opsz24.svg"
+            )
+        )
 
         impresora_label = QLabel("Impresora")
         impresora_label.setMinimumWidth(80)
@@ -198,11 +209,22 @@ class PrinterTabFrame(QWidget):
         linea.setFrameShape(QFrame.HLine)
         return linea
 
-    def _crear_caja_icono(self, caracter):
-        caja = QLabel(caracter)
+    def _crear_caja_icono(self, icono):
+        caja = QLabel()
         caja.setObjectName("cajaIcono")
         caja.setFixedSize(36, 36)
         caja.setAlignment(Qt.AlignCenter)
+
+        pixmap = QPixmap(icono)
+        if not pixmap.isNull():
+            caja.setPixmap(
+                pixmap.scaled(
+                    20, 20,
+                    Qt.KeepAspectRatio,
+                    Qt.SmoothTransformation
+                )
+            )
+
         return caja
 
     # -----------------------------------------------------------------

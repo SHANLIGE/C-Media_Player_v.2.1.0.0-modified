@@ -90,10 +90,20 @@ class MainFrame(QWidget):
         self.webTab = WebTabFrame()
         self.printerTab = PrinterTabFrame()
         self.readerTab = CodeReaderTabFrame()
-        self.tabWidget.addTab(self.generalTab, "⛭  General")
-        self.tabWidget.addTab(self.webTab, "⌬  Contenedor Web")
-        self.tabWidget.addTab(self.printerTab, "🖶  Impresora")
-        self.tabWidget.addTab(self.readerTab, "🗏  Lector")
+
+        self.tabWidget.addTab(self.generalTab, QIcon(os.path.expanduser("~") + "/.config/Ciel/C-Media_Player/images/settings_24dp_F99F04_FILL0_wght400_GRAD-25_opsz40.svg"),
+            "General")
+        
+
+        self.tabWidget.addTab(self.webTab, QIcon(os.path.expanduser("~") + "/.config/Ciel/C-Media_Player/images/language_24dp_F99F04_FILL0_wght400_GRAD0_opsz24.svg"),
+            "Web")
+        
+        self.tabWidget.addTab(self.printerTab, QIcon(os.path.expanduser("~") + "/.config/Ciel/C-Media_Player/images/print_24dp_F99F04_FILL0_wght400_GRAD-25_opsz24.svg"),
+            "Impresora")
+        
+        self.tabWidget.addTab(self.readerTab, QIcon(os.path.expanduser("~") + "/.config/Ciel/C-Media_Player/images/scan_24dp_F99F04_FILL0_wght400_GRAD-25_opsz24.svg"),
+            "Lector")
+        
         self.mainLayout.addWidget(self.tabWidget)
         
         palette = QPalette() # PANTONE
