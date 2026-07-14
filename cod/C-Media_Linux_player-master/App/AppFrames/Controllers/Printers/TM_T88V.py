@@ -688,7 +688,7 @@ class Printer():
                     tx.append(mientras5[k])
 
         #endregion linea 9
-        tx += bytearray([0x0A, 0x09]) # salto de linea
+        tx += bytearray([0x0A, 0x0A]) # salto de linea
     
         
         #region linea 10
@@ -704,7 +704,7 @@ class Printer():
                     tx.append( mientras6[k])
 
         #endregion linea10
-        tx += bytearray([0x0C])
+        tx += bytearray([0x0A]) #salto de linea sin Tab para evitar problemas de corte en el papel
          # saltos de linea adicionales para evitar corte del texto
         tx += bytearray([0x1D, 0x56, 0x01]) # cortar el papel
     
