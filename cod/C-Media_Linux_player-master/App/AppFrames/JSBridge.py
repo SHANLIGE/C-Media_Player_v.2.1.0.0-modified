@@ -195,10 +195,9 @@ class JSBridge(QtCore.QObject):
 
           window.external = {
     lanzarMensaje: function(msg){
-        alert("Tipo: " + typeof msg);
-        alert("Valor: [" + msg + "]");
+
         console.log("external funcionando");
-        alert("MSG:", msg);
+ 
         window.api.printer.imprimir(msg);
         
     }
