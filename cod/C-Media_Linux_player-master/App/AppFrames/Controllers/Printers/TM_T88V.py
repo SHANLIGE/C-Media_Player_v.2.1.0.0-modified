@@ -127,7 +127,7 @@ class Printer():
             else:
                 texto = str(lineas)
 
-            lineas_lista = texto.split("\n")
+            lineas_lista = texto.splitlines()
 
             while len(lineas_lista) < 15:
                 lineas_lista.append("")
@@ -737,6 +737,13 @@ class Printer():
 
         #endregion linea10
         tx += bytearray([0x0A])
+        # FF (Form Feed): el ticket empieza con ESC L (0x1B,0x4C), que pone
+        # la impresora en "modo pagina". En ese modo todo lo que se manda
+        # queda en un buffer interno y NO se imprime en el papel hasta que
+        # se envia FF, que vuelca la pagina completa e imprime, volviendo
+        # al modo estandar. Sin este comando el ticket queda en blanco:
+        # el papel avanza y se corta, pero nunca se llego a imprimir nada.
+        tx += bytearray([0x0C])  # FF: imprime el contenido del modo pagina
         tx += bytearray([0x1B, 0x64, 0x04]) # ESC d 4: avanza 4 lineas para que el papel pase el mecanismo de corte
         tx += bytearray([0x1D, 0x56, 0x41, 0x00]) # GS V 65 0: corte parcial (comando de 3 bytes, mas compatible entre impresoras/clones que el de 2 bytes)
 
