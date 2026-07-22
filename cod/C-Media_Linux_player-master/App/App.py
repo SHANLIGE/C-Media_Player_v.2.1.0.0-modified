@@ -35,10 +35,32 @@ else:
     from App.ConfigGUI.MainFrame import MainFrame as Configuration
     from App.Player import Player as Player
 
-
-
 #Creacion del archivo de logs
-logging.basicConfig(filename=os.path.expanduser('~')+"/.config/Ciel/C-Media_Player/logs/log.log", level=logging.DEBUG, format=("%(asctime)s:%(levelname)s:%(message)s"), datefmt="%m/%d/%Y %I:%M:%S %p")
+log_dir = os.path.expanduser("~/.config/Ciel/C-Media_Player/logs")
+os.makedirs(log_dir, exist_ok=True)
+
+log_file = os.path.join(log_dir, "log.log")
+
+open(log_file, "a").close()   # crea el archivo si no existe
+
+logging.basicConfig(
+    filename=log_file,
+    level=logging.DEBUG,
+    force=True
+)
+
+logging.basicConfig(
+    filename=log_file,
+    level=logging.DEBUG,
+    format="%(asctime)s:%(levelname)s:%(message)s",
+    datefmt="%m/%d/%Y %I:%M:%S %p",
+    force=True
+)
+
+logging.info("Logger iniciado")
+
+
+
 
 # Descomentarear la siguiente linea, para activar el modo de depuracion, que es accesible desde el navegador: http://localhost:9222
 # os.environ["QTWEBENGINE_REMOTE_DEBUGGING"] = "9222"
