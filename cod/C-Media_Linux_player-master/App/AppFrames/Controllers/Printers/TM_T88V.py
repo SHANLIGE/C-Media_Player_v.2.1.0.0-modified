@@ -731,7 +731,8 @@ class Printer():
         tx += bytearray([0x1B, 0x54, 0x01]) # direccion de impresion de derecha a izquierda
         tx += bytearray([0x1B, 0x33, 0x18]) # seleccionar espaciado
         tx += bytearray([0x1B, 0x21, 0x00, 0x09]) # seleccionar modo de impresion 
-        tx += bytearray([0x1D, 0x5C, 0x2C, 0x00]) # margen de 44px antes del bloque de lineas 8, 9 y 10 (20px mas que los 24 anteriores, para que en la SAT no se corten arriba)
+        tx += bytearray([0x1D, 0x5C, 0x40, 0x00]) # corrimiento horizontal del bloque lineas 8/9/10 (64px: 20 mas que los 44, para que el turno no quede montado)
+        tx += bytearray([0x1B, 0x5C, 0x30, 0x00]) # ESC \ +48 dots: con ESC T 1 este es el eje vertical fisico, baja las lineas 8/9/10 al nivel de la linea 7
         
         #region linea 8
         if tamano > 7:
@@ -750,6 +751,7 @@ class Printer():
         #endregion linea 8
       
         tx += bytearray([0x0A, 0x09]) # salto de linea
+        tx += bytearray([0x1B, 0x5C, 0x30, 0x00]) # ESC \ +48: reaplica el offset vertical a la linea 9 (el salto de linea lo reinicio)
 
         #region linea 9
         if tamano > 8:
@@ -766,6 +768,7 @@ class Printer():
 
         #endregion linea 9
         tx += bytearray([0x0A, 0x09]) # salto de linea
+        tx += bytearray([0x1B, 0x5C, 0x30, 0x00]) # ESC \ +48: reaplica el offset vertical a la linea 10 (el salto de linea lo reinicio)
     
         
         #region linea 10
