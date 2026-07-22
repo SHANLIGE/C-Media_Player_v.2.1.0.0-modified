@@ -2,7 +2,6 @@
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 from PySide6.QtGui import *
-from .ConfigGUI.TitleBar import TitleBar
 
 #Otras librerias 
 import sys
@@ -26,16 +25,18 @@ debug = "--debug" in sys.argv
 if debug:
     #Clases internas - Pruebas 
     #Descomentar para realizar pruebas con python
+    from ConfigGUI.TitleBar import *
     from ConfigGUI.MainFrame import MainFrame as Configuration
     from Player import Player as Player
     argv.remove("--debug")
 else:
     #Clases internas - Compilación
     #Descomentar para realizar compilacion de la aplicacion
+    from App.ConfigGUI.TitleBar import *
     from App.ConfigGUI.MainFrame import MainFrame as Configuration
     from App.Player import Player as Player
 
-#Creacion del archivo de logs
+
 log_dir = os.path.expanduser("~/.config/Ciel/C-Media_Player/logs")
 os.makedirs(log_dir, exist_ok=True)
 
@@ -43,11 +44,7 @@ log_file = os.path.join(log_dir, "log.log")
 
 open(log_file, "a").close()   # crea el archivo si no existe
 
-logging.basicConfig(
-    filename=log_file,
-    level=logging.DEBUG,
-    force=True
-)
+
 
 logging.basicConfig(
     filename=log_file,
@@ -57,10 +54,7 @@ logging.basicConfig(
     force=True
 )
 
-logging.info("Logger iniciado")
-
-
-
+#Creacion del archivo de logs
 
 # Descomentarear la siguiente linea, para activar el modo de depuracion, que es accesible desde el navegador: http://localhost:9222
 # os.environ["QTWEBENGINE_REMOTE_DEBUGGING"] = "9222"

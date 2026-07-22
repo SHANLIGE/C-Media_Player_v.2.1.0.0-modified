@@ -33,7 +33,7 @@ class Player(QMainWindow):
         self.setWindowIcon(icon)
 
         #Nombre de la Aplicacion
-        QCoreApplication.setApplicationName("C-Media Player v2.0")
+        QCoreApplication.setApplicationName("C-Media Player v2.2")
 
         self.screen_disconnected = False
         self.close = False
