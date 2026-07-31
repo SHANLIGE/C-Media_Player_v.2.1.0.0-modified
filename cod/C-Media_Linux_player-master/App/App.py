@@ -62,10 +62,6 @@ logging.basicConfig(
 #Creacion aplicacion
 os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--disable-pinch"
 
-QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
-QCoreApplication.setAttribute(Qt.AA_UseHighDpiPixmaps)
-QCoreApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
-
 root = QApplication()
 QCoreApplication.setApplicationName("C-Media Player")
 
