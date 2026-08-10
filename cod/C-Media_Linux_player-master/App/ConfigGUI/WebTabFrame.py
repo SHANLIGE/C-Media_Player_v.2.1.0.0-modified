@@ -19,6 +19,7 @@ COLOR_BORDE = "#E4E6E9"
 COLOR_TEXTO = "#313336"
 COLOR_TEXTO_SUAVE = "#5B6066"
 COLOR_BACKGROUND = "#F2F4F6"
+COLOR_SCROLLBAR_BG = "#D0D0D3"
 
 
 class WebTabFrame(QWidget):
@@ -87,24 +88,78 @@ class WebTabFrame(QWidget):
             }}
         """)
 
-        # Layout principal vertical
-        self.mainLayout = QVBoxLayout()
+        
+        
+
+        # Layout principal
+        self.rootLayout = QVBoxLayout(self)
+        self.rootLayout.setContentsMargins(0, 0, 0, 0)
+        self.rootLayout.setSpacing(0)
+        
+
+        # Scroll
+        self.scroll = QScrollArea()
+        self.scroll.setWidgetResizable(True)
+        self.scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.scroll.setStyleSheet(f"""
+            QScrollArea {{
+                            border: none;
+            }}
+            QScrollBar:vertical {{
+                background-color: {COLOR_BORDE};
+                width: 12px;
+                margin: 0px 0px 0px 0px;
+            }}
+            QScrollBar::handle:vertical {{
+                background-color: {COLOR_SCROLLBAR_BG};
+                min-height: 20px;
+                border-radius: 6px;
+            }}
+            
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
+                height: 0px;
+            }}
+            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{
+                background: none;
+            }}
+           
+            """)
+        
+        self.rootLayout.addWidget(self.scroll)
+
+        # Contenedor del scroll
+        self.scrollWidget = QWidget()
+
+        # Scroll del layout
+        self.mainLayout = QVBoxLayout(self.scrollWidget)
         self.mainLayout.setContentsMargins(20, 18, 20, 18)
         self.mainLayout.setSpacing(14)
-        self.setLayout(self.mainLayout)
+        
 
+        self.scroll.setWidget(self.scrollWidget)
+        
         # ------------------------------------------------------------------
         # Fila 1: URL
         # ------------------------------------------------------------------
         titulo_url = QLabel("Url")
         titulo_url.setObjectName("tituloSeccion")
         self.mainLayout.addWidget(titulo_url)
+        
 
         self.url_entry = QLineEdit(self.url)
         self.url_entry.setMinimumHeight(38)
         self.mainLayout.addWidget(self.url_entry)
 
-        self.mainLayout.addWidget(self._crear_separador())
+        self.addUrl_button = self._crear_boton("+ Url")
+        self.addUrl_button.clicked.connect(self.add_url)
+        self.addUrl_button.setMinimumWidth(100)
+        self.mainLayout.addWidget(self.addUrl_button, alignment=Qt.AlignRight)
+
+     
+
+
+        
 
         # ------------------------------------------------------------------
         # Fila 2: Barra de navegacion
@@ -121,7 +176,7 @@ class WebTabFrame(QWidget):
         fila_navbar.addStretch(1)
 
         self.mainLayout.addLayout(fila_navbar)
-        self.mainLayout.addWidget(self._crear_separador())
+       
         self.mainLayout.addStretch(1)
         
         # ------------------------------------------------------------------
@@ -231,9 +286,6 @@ class WebTabFrame(QWidget):
         layout.addWidget(checkbox)
         return layout
 
-    # -----------------------------------------------------------------
-    # Logica original (sin cambios)
-    # -----------------------------------------------------------------
     def get_settings(self):
         """
         Obtiene la configuracion del archivo json y las guarda en un atributo de la clase
@@ -276,5 +328,16 @@ class WebTabFrame(QWidget):
         with open(path, "w", encoding="utf-8-sig") as file:
             file.write(json.dumps(settings))
 
+    def add_url(self):
+        """
+        Agrega la URL ingresada en el campo de texto a la configuracion
+        """
+        self.url_entry = QLineEdit(self.url)
+        self.url_entry.setMinimumHeight(38)
+        self.mainLayout.addWidget(self.url_entry)
+        self.mainLayout.insertWidget(
+            self.mainLayout.indexOf(self.addUrl_button),
+            self.url_entry
+        )
 
-
+   
