@@ -102,23 +102,44 @@ class Event(object):
         )
         return self._wrap(llamada)
 
-    def _build_js_lector(self, metodo, arg_js):
+    def _build_js_lector(self, metodo, arg_js, acciones_key=""):
         """
-        Resuelve el lector activo en el navegador y llama el metodo sobre
-        su instancia (controlActual).
+        Resuelve el lector a usar y llama el metodo sobre su instancia.
+
+        Un recurso puede traer VARIOS controles de lector (p.ej. un
+        "Lector Newland" y un "Lector Codigo de Barras (2D Honeywell)1").
+        Tomar el primero con controlActual es una loteria: si cae en el que
+        no tiene acciones configuradas, el player recibe el documento y no
+        hace nada.
+
+        Por eso se elige el control cuyo arreglo de acciones para ESTE tipo
+        de documento tenga mayor longitud. Si ninguno tiene acciones se usa
+        el primero y se avisa por consola.
         """
         cuerpo = (
             "var O=Ciel.MPC.WebPlayer.Controles.Omnidireccional,"
-            "L={lista},c=null,i;"
+            "L={lista},C=[],i,ob,n,best=null,bn=-1,k={key};"
             "for(i=0;i<L.length;i++){{if(L[i]&&L[i].controlActual)"
-            "{{c=L[i].controlActual;break;}}}}"
-            "if(!c){{console.error('EVENT: ningun lector omnidireccional "
-            "registrado en este recurso');}}"
-            "else if(typeof c.{metodo}!=='function'){{console.error("
-            "'EVENT: el control '+c.Nombre+' no expone {metodo}');}}"
-            "else{{console.log('EVENT -> '+c.Nombre+'.{metodo}');"
-            "c.{metodo}({arg});}}"
-        ).format(lista=self._LISTA_LECTORES_JS, metodo=metodo, arg=arg_js)
+            "{{C.push(L[i].controlActual);}}}}"
+            "if(!C.length){{console.error('EVENT: ningun lector "
+            "omnidireccional registrado en este recurso');return;}}"
+            "for(i=0;i<C.length;i++){{ob=C[i].ObjetoBase||{{}};"
+            "n=k?((ob[k]||[]).length):0;"
+            "console.log('EVENT candidato: '+C[i].Nombre+'  '+k+'='+n);"
+            "if(n>bn){{bn=n;best=C[i];}}}}"
+            "if(k&&bn<=0){{console.warn('EVENT: ningun control tiene '+k+"
+            "' configurado. Se usa '+best.Nombre+' pero el player no "
+            "ejecutara acciones.');}}"
+            "if(typeof best.{metodo}!=='function'){{console.error("
+            "'EVENT: '+best.Nombre+' no expone {metodo}');return;}}"
+            "console.log('EVENT -> '+best.Nombre+'.{metodo}');"
+            "best.{metodo}({arg});"
+        ).format(
+            lista=self._LISTA_LECTORES_JS,
+            key=json.dumps(acciones_key),
+            metodo=metodo,
+            arg=arg_js,
+        )
 
         return self._wrap("(function(){" + cuerpo + "})()")
 
@@ -171,9 +192,17 @@ class Event(object):
         self.clear()
         return enviado
 
-    def awake_lector(self, metodo, arg_js):
-        """Llama 'metodo' sobre el lector que este registrado en el recurso."""
-        return self._run(self._build_js_lector(metodo, arg_js))
+    # Arreglo de acciones que ejecuta el player para cada TipoDocumento.
+    ACCIONES_POR_TIPO = {
+        "0": "AccionesAlCapturarCedulaColombina",
+        "1": "AccionesAlCapturarCedulaExtranjeria",
+        "2": "AccionesAlCapturarTarjetaIdentidad",
+        "3": "AccionesAlCapturarPasaporte",
+    }
+
+    def awake_lector(self, metodo, arg_js, acciones_key=""):
+        """Llama 'metodo' sobre el lector mas apropiado del recurso."""
+        return self._run(self._build_js_lector(metodo, arg_js, acciones_key))
 
     def awake_documento(self, doc):
         """
@@ -188,7 +217,8 @@ class Event(object):
         Cualquier otro valor no entra en ningun case y no hace nada.
         """
         doc = dict(doc or {})
-        doc["TipoDocumento"] = str(doc.get("TipoDocumento", "0"))
+        tipo = str(doc.get("TipoDocumento", "0"))
+        doc["TipoDocumento"] = tipo
 
         # El player hace n.FechaDeNacimiento.slice(0,10): si viene vacia
         # lanza TypeError antes de ejecutar las acciones.
@@ -198,17 +228,20 @@ class Event(object):
         for k, v in list(doc.items()):
             doc[k] = "" if v is None else str(v)
 
-        return self.awake_lector("EstablecerJsonDocumento", self.js_object(doc))
+        clave = self.ACCIONES_POR_TIPO.get(tipo, "")
+        return self.awake_lector(
+            "EstablecerJsonDocumento", self.js_object(doc), clave
+        )
 
     def awake_codigo(self, codigo):
         """
         Ruta de codigo generico.
 
-        Requiere AccionesAlCapturarCodigo poblado en el recurso. En
-        TouchSaludTotal ese arreglo esta vacio (length 0), asi que el
-        player entra a EjecutarAcciones y sale sin hacer nada.
+        Requiere AccionesAlCapturarCodigo poblado en el control elegido.
         """
-        return self.awake_lector("EstablecerCodigo", self.js_string(codigo))
+        return self.awake_lector(
+            "EstablecerCodigo", self.js_string(codigo), "AccionesAlCapturarCodigo"
+        )
 
     def notificar_error(self, mensaje):
         """

@@ -23,6 +23,7 @@ CODE_ID_PASSPORT  = ord('O')   # 0x4F
 
 
 class BarCodeReader():
+   
 
     def __init__(self, device=None):
         self.device     = device
@@ -182,8 +183,23 @@ class BarCodeReader():
             self._esperando_mrz = False
             return self._procesar_mrz_td1(datos)
 
+        # PDF417 CON Code ID 'P' (asi lo envia el lector del otro servidor)
         if datos[0] == 0x50:
+            print("Lector: PDF417 con Code ID 'P'")
             return self._procesar_cedula_pdf417(datos[1:])
+
+        # PDF417 SIN Code ID.
+        # La cedula colombiana amarilla son ~532 bytes. Si el lector no
+        # tiene activado el Code ID Prefix la trama llega cruda y antes
+        # caia en _procesar_cedula_alternativa, que la marcaba como
+        # TipoDocumento "2" (tarjeta de identidad) con offsets erroneos.
+        if len(datos) >= 400:
+            print(f"Lector: trama larga sin prefijo 'P' ({len(datos)} bytes) "
+                  f"-> PDF417 directo")
+            print(f"Lector: hex[0:64]  = {datos[:64].hex(' ')}")
+            print(f"Lector: byte[32:34] = {bytes(datos[32:34])!r}  "
+                  f"byte[48:50] = {bytes(datos[48:50])!r}")
+            return self._procesar_cedula_pdf417(datos)
 
         if all(0x20 <= b <= 0x7E for b in datos):
             try:
@@ -206,6 +222,10 @@ class BarCodeReader():
             self.event.awake_codigo(texto)
             return texto
 
+        # Binario no identificado. Antes se asumia directamente cedula
+        # alternativa (TipoDocumento "2") con offsets fijos, lo que con la
+        # cedula digital produce datos basura.
+        self._volcar_trama(datos, "binario_desconocido")
         return self._procesar_cedula_alternativa(datos[1:])
 
     # ── Multi linea MRZ (OCR-B / Passport OCR) ─────────────────────────────
@@ -295,8 +315,12 @@ class BarCodeReader():
         """
         QR cifrado cedula colombiana digital (policarbonato 2022+).
         Activa _esperando_mrz para el flujo de doble escaneo.
+
+        El contenido del QR va firmado por la Registraduria y no se
+        interpreta aqui. Se vuelca para poder analizarlo.
         """
         print(f"Lector: QR cedula nueva ({len(texto)} chars) - activando espera MRZ")
+        self._volcar_trama(texto.encode("utf-8", errors="replace"), "qr_cedula_nueva")
         self._esperando_mrz = True
         self.event.notificar_error(
             "Cedula digital nueva: escanee las 3 lineas de texto (zona MRZ) "
@@ -495,6 +519,32 @@ class BarCodeReader():
             self.event.notificar_error("Error al interpretar la cedula")
             return None
 
+    def _volcar_trama(self, datos: bytes, etiqueta: str):
+        """
+        Diagnostico: deja la trama cruda en /tmp para poder analizarla.
+
+        Se usa en las ramas donde no se identifico el formato, que es lo
+        que pasa con la cedula digital de policarbonato.
+        """
+        try:
+            import time
+            ruta = "/tmp/lector_{0}_{1}.bin".format(etiqueta, int(time.time() * 1000))
+            with open(ruta, "wb") as fh:
+                fh.write(datos)
+            print(f"Lector: trama volcada en {ruta}")
+        except Exception as e:
+            print(f"Lector: no se pudo volcar la trama: {e}")
+
+        imprimibles = sum(1 for b in datos if 0x20 <= b <= 0x7E)
+        print(f"Lector: [{etiqueta}] len={len(datos)} "
+              f"imprimibles={imprimibles}/{len(datos)}")
+        print(f"Lector: hex[0:80]  = {datos[:80].hex(' ')}")
+        try:
+            print(f"Lector: txt[0:120] = "
+                  f"{datos[:120].decode('ascii', errors='replace')!r}")
+        except Exception:
+            pass
+
     def _procesar_cedula_alternativa(self, byte: bytearray) -> dict:
         """Parsea cedulas binarias no-JPEG, no-PDF417, no-MRZ."""
         try:
@@ -531,6 +581,20 @@ class BarCodeReader():
         resuelve el lector activo y pasa el objeto directo.
         """
         self.result = payload
+
+        tipo = str(payload.get("TipoDocumento", ""))
+        nombre_tipo = {
+            "0": "cedula colombiana -> AccionesAlCapturarCedulaColombina",
+            "1": "cedula extranjeria -> AccionesAlCapturarCedulaExtranjeria",
+            "2": "tarjeta identidad -> AccionesAlCapturarTarjetaIdentidad",
+            "3": "pasaporte -> AccionesAlCapturarPasaporte (solo Newland)",
+        }.get(tipo, "TIPO NO RECONOCIDO POR EL PLAYER - no disparara nada")
+
+        print(f"Lector: emitiendo TipoDocumento={tipo}  ({nombre_tipo})")
+        print(f"Lector: numero={payload.get('Numero')!r} "
+              f"nombre={payload.get('PrimerNombre')!r} "
+              f"apellido={payload.get('PrimerApellido')!r}")
+
         self.event.awake_documento(payload)
 
     def _es_mrz_completo(self, datos: bytes) -> bool:
