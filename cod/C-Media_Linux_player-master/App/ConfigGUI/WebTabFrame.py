@@ -172,12 +172,6 @@ class WebTabFrame(QWidget):
         titulo_url.setObjectName("tituloSeccion")
         self.mainLayout.addWidget(titulo_url)
 
-        ayuda = QLabel("Cada URL abre una ventana del reproductor. Elija en qué "
-                       "monitor se muestra, o déjelo en Automático para repartirlas "
-                       "en orden. Marque las casillas de las URLs que desee eliminar.")
-        ayuda.setObjectName("ayuda")
-        ayuda.setWordWrap(True)
-        self.mainLayout.addWidget(ayuda)
 
         # Monitores detectados
         self.label_monitores = QLabel()
@@ -415,9 +409,7 @@ class WebTabFrame(QWidget):
     # -----------------------------------------------------------------
     def _agregar_fila_url(self, url="", monitor=0):
         """
-        Crea una fila: check de seleccion + indice + URL + monitor asignado
-        :param url: str. Valor inicial del campo
-        :param monitor: int. Monitor guardado (0 = automatico)
+        Crea una fila
         """
         fila = QWidget()
         layout = QHBoxLayout(fila)
@@ -432,7 +424,7 @@ class WebTabFrame(QWidget):
 
         entry = QLineEdit(url)
         entry.setMinimumHeight(38)
-        entry.setPlaceholderText("https://ejemplo.com")
+        entry.setPlaceholderText("https://www.cielingenieria.com")
 
         combo = QComboBox()
         combo.setMinimumHeight(38)
@@ -586,13 +578,7 @@ class WebTabFrame(QWidget):
                     self.nav_bar = base.get("MostrarBarraNavegacion", False)
 
     def save_settings(self):
-        """
-        Guarda las URLs y su monitor en el archivo de pantallas.
-        - Actualiza los controles web existentes.
-        - Crea una pantalla nueva (clonando la primera pantalla web) por cada URL extra.
-        - Elimina los controles/pantallas sobrantes.
-        - Verifica el resultado releyendo el archivo.
-        """
+        # Guarda la configuracion de las urls
         datos = self._obtener_datos()
         if datos is None:
             return
