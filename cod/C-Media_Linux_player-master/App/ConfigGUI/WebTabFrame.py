@@ -168,11 +168,7 @@ class WebTabFrame(QWidget):
         # ------------------------------------------------------------------
         # Fila 1: URLs
         # ------------------------------------------------------------------
-        titulo_url = QLabel("Url")
-        titulo_url.setObjectName("tituloSeccion")
-        self.mainLayout.addWidget(titulo_url)
-
-
+    
         # Monitores detectados
         self.label_monitores = QLabel()
         self.label_monitores.setObjectName("monitores")
