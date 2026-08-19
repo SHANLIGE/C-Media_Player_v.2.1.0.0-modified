@@ -1,8 +1,8 @@
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 from PySide6.QtGui import *
-from .TerminalTabFrame import TerminalTabFrame
-from .ToggleButton import ToggleButton
+
+# Otras librerías
 import json
 import os
 import copy
@@ -33,145 +33,655 @@ LLAVE_MONITOR = "MonitorAsignado"
 
 
 class WebTabFrame(QWidget):
-    def __init__(self, terminal_tab: TerminalTabFrame = None):
-        super().__init__()
+    """
+    Clase de vista de configuracion del Contenedor Web.
+    Permite administrar varias URLs: cada URL corresponde a una pantalla
+    con un control de navegador web, y puede asignarse a un monitor.
+    """
 
-        self._terminal_tab = terminal_tab
+    def __init__(self):
+        super().__init__()
         self.setEnabled(False)
-        self.url = ""
-        self.url_terminal = ""
+        self.pantallas_web = []   # [{"url": str, "monitor": int}, ...]
         self.nav_bar = False
         self.filas_url = []       # [{"widget","check","entry","combo","indice"}, ...]
         self.get_settings()
 
-        # Fondo
+        # Fondo blanco
         bg = QPalette()
-        bg.setColor(QPalette.Window, "#dae7ef")
+        bg.setColor(QPalette.Window, COLOR_FONDO)
         self.setAutoFillBackground(True)
         self.setPalette(bg)
 
-        # Layout
-        self.mainLayout = QGridLayout()
-        self.setLayout(self.mainLayout)
+        self.setStyleSheet(f"""
+            QWidget {{
+                color: {COLOR_TEXTO};
+                font-family: "Segoe UI", "Noto Sans", sans-serif;
+                font-size: 13px;
+            }}
+            QLineEdit, QSpinBox, QComboBox {{
+                background-color: {COLOR_INPUT_BG};
+                border: 1px solid {COLOR_BORDE};
+                border-radius: 8px;
+                padding: 8px 10px;
+            }}
+            QComboBox {{
+                min-width: 165px;
+            }}
+            QComboBox::drop-down {{
+                border: none;
+                width: 22px;
+            }}
+            QComboBox QAbstractItemView {{
+                background-color: white;
+                border: 1px solid {COLOR_BORDE};
+                selection-background-color: {COLOR_NARANJA};
+                selection-color: white;
+                outline: none;
+            }}
+            QLineEdit:read-only {{
+                color: {COLOR_TEXTO_SUAVE};
+            }}
+            QCheckBox::indicator {{
+                width: 20px;
+                height: 20px;
+                border: 2px solid {COLOR_BORDE};
+                border-radius: 5px;
+                background-color: white;
+            }}
+            QCheckBox::indicator:checked {{
+                background-color: {COLOR_NARANJA};
+                border: 2px solid {COLOR_NARANJA};
+                image: url({os.path.expanduser('~')}/.config/Ciel/C-Media_Player/images/check-solid-full.svg);
+            }}
+            QFrame#separador {{
+                color: {COLOR_BORDE};
+                max-height: 1px;
+                min-height: 1px;
+            }}
+            QLabel#tituloSeccion {{
+                font-weight: 600;
+                font-size: 14px;
+            }}
+            QLabel#ayuda {{
+                color: {COLOR_TEXTO_SUAVE};
+            }}
+            QLabel#monitores {{
+                color: {COLOR_TEXTO_SUAVE};
+                font-weight: 600;
+            }}
+            QLabel#indiceUrl {{
+                color: {COLOR_TEXTO_SUAVE};
+                font-weight: 600;
+                min-width: 22px;
+            }}
+            QLabel#cajaIcono {{
+                background-color: {COLOR_BACKGROUND};
+                border: 1px solid {COLOR_BORDE};
+                border-radius: 5px;
+                color: {COLOR_NARANJA};
+                font-size: 16px;
+                font-weight: bold;
+            }}
+        """)
 
-        # Fila 1 – URL Selector + toggle barra de navegacion
-        self.url_label = QLabel("Url")
-        self.url_label.setFixedHeight(50)
-        self.mainLayout.addWidget(self.url_label, 0, 0, 1, 1)
-        self.url_entry = QLineEdit(self.url)
-        self.mainLayout.addWidget(self.url_entry, 0, 1, 1, 5)
-     
+        # Layout principal
+        self.rootLayout = QVBoxLayout(self)
+        self.rootLayout.setContentsMargins(0, 0, 0, 0)
+        self.rootLayout.setSpacing(0)
 
-        self.terminal_label = QLabel("Terminal")
-        self.terminal_label.setFixedHeight(50)
-        self.mainLayout.addWidget(self.terminal_label, 1, 0, 1, 1)
-        self.url_entry_terminal = QLineEdit()
-        self.mainLayout.addWidget(self.url_entry_terminal, 1, 1, 1, 5)
-        self.url_entry_terminal.textChanged.connect(self._sync_terminal_url)
-        # Asignar después de conectar → dispara _sync_terminal_url con la URL cargada
-        if self.url_terminal:
-            self.url_entry_terminal.setText(self.url_terminal)
+        # Scroll
+        self.scroll = QScrollArea()
+        self.scroll.setWidgetResizable(True)
+        self.scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.scroll.setStyleSheet(f"""
+            QScrollArea {{
+                border: none;
+            }}
+            QScrollBar:vertical {{
+                background-color: {COLOR_BORDE};
+                width: 12px;
+                margin: 0px 0px 0px 0px;
+            }}
+            QScrollBar::handle:vertical {{
+                background-color: {COLOR_SCROLLBAR_BG};
+                min-height: 20px;
+                border-radius: 6px;
+            }}
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
+                height: 0px;
+            }}
+            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{
+                background: none;
+            }}
+        """)
+        self.rootLayout.addWidget(self.scroll)
 
-        # Fila 2 – Barra de Navegación
-        self.nav_bar_label = QLabel("Barra de Navegación")
-        self.nav_bar_label.setFixedHeight(50)   
-        self.mainLayout.addWidget(self.nav_bar_label, 2, 0, 1, 2)
-        #self.nav_bar_button = ToggleButton(self.nav_bar)
-        self.nav_bar_button = QCheckBox(self)
+        # Contenedor del scroll
+        self.scrollWidget = QWidget()
+        self.mainLayout = QVBoxLayout(self.scrollWidget)
+        self.mainLayout.setContentsMargins(20, 18, 20, 18)
+        self.mainLayout.setSpacing(14)
+        self.scroll.setWidget(self.scrollWidget)
+
+        # ------------------------------------------------------------------
+        # Fila 1: URLs
+        # ------------------------------------------------------------------
+        titulo_url = QLabel("Url")
+        titulo_url.setObjectName("tituloSeccion")
+        self.mainLayout.addWidget(titulo_url)
+
+        ayuda = QLabel("Cada URL abre una ventana del reproductor. Elija en qué "
+                       "monitor se muestra, o déjelo en Automático para repartirlas "
+                       "en orden. Marque las casillas de las URLs que desee eliminar.")
+        ayuda.setObjectName("ayuda")
+        ayuda.setWordWrap(True)
+        self.mainLayout.addWidget(ayuda)
+
+        # Monitores detectados
+        self.label_monitores = QLabel()
+        self.label_monitores.setObjectName("monitores")
+        self.label_monitores.setWordWrap(True)
+
+        self.refrescar_button = self._crear_boton("Detectar pantallas")
+        self.refrescar_button.clicked.connect(self.refrescar_monitores)
+        self.refrescar_button.setMinimumWidth(160)
+
+        fila_monitores = QHBoxLayout()
+        fila_monitores.setSpacing(10)
+        fila_monitores.addWidget(self.label_monitores, 1)
+        fila_monitores.addWidget(self.refrescar_button)
+        self.mainLayout.addLayout(fila_monitores)
+
+        # Contenedor donde se apilan las filas de URL
+        self.urls_container = QWidget()
+        self.urls_layout = QVBoxLayout(self.urls_container)
+        self.urls_layout.setContentsMargins(0, 0, 0, 0)
+        self.urls_layout.setSpacing(8)
+        self.mainLayout.addWidget(self.urls_container)
+
+        # Botones + Url / Eliminar
+        self.addUrl_button = self._crear_boton("+ Url")
+        self.addUrl_button.clicked.connect(self.add_url)
+        self.addUrl_button.setMinimumWidth(110)
+
+        self.deleteUrl_button = self._crear_boton("Eliminar", COLOR_ROJO, COLOR_ROJO_HOVER)
+        self.deleteUrl_button.clicked.connect(self.delete_urls)
+        self.deleteUrl_button.setMinimumWidth(110)
+
+        fila_botones_url = QHBoxLayout()
+        fila_botones_url.setSpacing(10)
+        fila_botones_url.addStretch(1)
+        fila_botones_url.addWidget(self.addUrl_button)
+        fila_botones_url.addWidget(self.deleteUrl_button)
+        self.mainLayout.addLayout(fila_botones_url)
+
+        # Se crean las filas con las URLs existentes
+        if self.pantallas_web:
+            for datos in self.pantallas_web:
+                self._agregar_fila_url(datos["url"], datos["monitor"])
+        else:
+            self._agregar_fila_url("", 0)
+
+        self._actualizar_label_monitores()
+
+        # Se reacomodan los combos si se conecta o desconecta un monitor
+        app = QGuiApplication.instance()
+        if app is not None:
+            app.screenAdded.connect(lambda s: self.refrescar_monitores())
+            app.screenRemoved.connect(lambda s: self.refrescar_monitores())
+
+        # ------------------------------------------------------------------
+        # Fila 2: Barra de navegacion
+        # ------------------------------------------------------------------
+        fila_navbar = QHBoxLayout()
+        fila_navbar.setSpacing(28)
+
+        self.nav_bar_button = QCheckBox()
         self.nav_bar_button.setChecked(self.nav_bar)
-        #self.nav_bar_button.toggled.connect(self.funcionnb) # CAMBIAR FUNCION
-        self.mainLayout.addWidget(self.nav_bar_button, 2, 2)
+        fila_navbar.addLayout(self._crear_fila_opcion(
+            os.path.expanduser("~") + "/.config/Ciel/C-Media_Player/images/language_24dp_F99F04_FILL0_wght400_GRAD0_opsz24.svg",
+            "Barra de Navegación", self.nav_bar_button))
+        fila_navbar.addStretch(1)
 
-        # Fila 3 – Guardar
-        self.save_button = QPushButton("Guardar")
-        self.save_button.clicked.connect(self.save_settings)
-        self.mainLayout.addWidget(self.save_button, 3, 2, 1, 2)
-        self.save_button.setStyleSheet(
-            "QPushButton{background-color: rgb(88, 102, 108); padding: 6px; "
-            "border-radius: 3px; color: white}"
-            "QPushButton::pressed{background-color: rgb(62, 72, 77); padding: 6px; "
-            "border-radius: 3px; color: white}"
-        )
+        self.mainLayout.addLayout(fila_navbar)
+        self.mainLayout.addStretch(1)
 
-        # Imagen
+        # ------------------------------------------------------------------
+        # Logo marca de agua a la derecha
+        # ------------------------------------------------------------------
         img = QLabel()
-        path = os.path.expanduser("~") + "/.config/Ciel/C-Media_Player/Media/LOGO-CMedia.png"
-        img.setPixmap(QPixmap(path))
-        self.mainLayout.addWidget(img, 3, 5, 1, 1, Qt.AlignRight | Qt.AlignBottom)
+        logo_path = os.path.expanduser('~') + "/.config/Ciel/C-Media_Player/Media/LOGO-CMedia.png"
+        pixmap = QPixmap(logo_path)
+        if not pixmap.isNull():
+            pixmap = pixmap.scaledToWidth(110, Qt.SmoothTransformation)
+        img.setPixmap(pixmap)
+        opacidad = QGraphicsOpacityEffect(img)
+        opacidad.setOpacity(0.18)
+        img.setGraphicsEffect(opacidad)
 
+        fila_marca = QHBoxLayout()
+        fila_marca.addWidget(img, alignment=Qt.AlignRight | Qt.AlignBottom)
+        self.mainLayout.addLayout(fila_marca)
 
+        # ------------------------------------------------------------------
+        # Guardar centrado
+        # ------------------------------------------------------------------
+        self.save_button = self._crear_boton("Guardar")
+        self.save_button.clicked.connect(self.save_settings)
+        self.save_button.setMinimumWidth(260)
 
-    def set_terminal_tab(self, terminal_tab):
+        fila_guardar = QHBoxLayout()
+        fila_guardar.addStretch(1)
+        fila_guardar.addWidget(self.save_button)
+        fila_guardar.addStretch(1)
+
+        self.mainLayout.addStretch(1)
+        self.mainLayout.addLayout(fila_guardar)
+        self.mainLayout.addStretch(1)
+
+    # -----------------------------------------------------------------
+    # Helpers visuales
+    # -----------------------------------------------------------------
+    def _crear_boton(self, texto, color=COLOR_NARANJA, color_hover=COLOR_NARANJA_HOVER):
         """
-        Permite vincular el TerminalTabFrame después de la construcción,
-        útil cuando el orden de creación no permite pasarlo en __init__.
+        Crea un boton con el estilo de la aplicacion
         """
-        self._terminal_tab = terminal_tab
-        url = self.url_entry_terminal.text().strip()
-        if url:
-            self._terminal_tab.set_api_base(url, reload=True)
+        boton = QPushButton(texto)
+        boton.setCursor(Qt.PointingHandCursor)
+        boton.setMinimumHeight(40)
+        boton.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {color};
+                color: white;
+                padding: 8px 18px;
+                border-radius: 6px;
+                font-weight: 600;
+            }}
+            QPushButton:hover {{
+                background-color: {color_hover};
+            }}
+            QPushButton:pressed {{
+                background-color: {color};
+            }}
+        """)
+        return boton
 
-    def _sync_terminal_url(self, text: str):
-        """Llamado cada vez que cambia el texto de url_entry_terminal."""
-        if self._terminal_tab and text.strip():
-            # reload=True → dispara _cargar_oficinas internamente
-            self._terminal_tab.set_api_base(text.strip(), reload=True)
+    def _crear_separador(self):
+        """
+        Linea horizontal divisoria entre secciones
+        """
+        linea = QFrame()
+        linea.setObjectName("separador")
+        linea.setFrameShape(QFrame.HLine)
+        return linea
 
-    def _get_config_path(self):
-        """Devuelve la ruta real del archivo de configuracion (.ccmj)."""
-        base = os.path.expanduser("~") + "/.config/Ciel/C-Media_Player/configs/config.json"
-        with open(base, "r") as f:
-            settings = json.load(f)
+    def _crear_caja_icono(self, icono):
+        """
+        Caja cuadrada con icono en naranja suave
+        """
+        caja = QLabel()
+        caja.setObjectName("cajaIcono")
+        caja.setFixedSize(36, 36)
+        caja.setAlignment(Qt.AlignCenter)
+
+        pixmap = QPixmap(icono)
+        if not pixmap.isNull():
+            caja.setPixmap(pixmap.scaled(20, 20, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        return caja
+
+    def _crear_fila_opcion(self, icono, texto, checkbox):
+        """
+        Fila: caja de icono + etiqueta + checkbox
+        """
+        layout = QHBoxLayout()
+        layout.setSpacing(10)
+        layout.addWidget(self._crear_caja_icono(icono))
+        layout.addWidget(QLabel(texto))
+        layout.addSpacing(6)
+        layout.addWidget(checkbox)
+        return layout
+
+    # -----------------------------------------------------------------
+    # Monitores
+    # -----------------------------------------------------------------
+    def _monitores(self):
+        """
+        Lista de monitores detectados por el sistema
+        :return: list[QScreen]
+        """
+        app = QGuiApplication.instance()
+        return list(app.screens()) if app is not None else []
+
+    def _nombre_monitor(self, indice, monitor):
+        """
+        Etiqueta legible de un monitor
+        :param indice: int. Posicion en la lista (base 0)
+        :param monitor: QScreen
+        :return: str
+        """
+        geo = monitor.geometry()
+        nombre = monitor.name() or "Monitor"
+        return f"{indice + 1} · {nombre} ({geo.width()}x{geo.height()})"
+
+    def _llenar_combo(self, combo, seleccion=0):
+        """
+        Llena un combo con los monitores detectados
+        :param combo: QComboBox
+        :param seleccion: int. Monitor guardado (0 = automatico, 1 = primero...)
+        """
+        combo.blockSignals(True)
+        combo.clear()
+        combo.addItem("Automático", 0)
+
+        monitores = self._monitores()
+        for indice, monitor in enumerate(monitores):
+            combo.addItem(self._nombre_monitor(indice, monitor), indice + 1)
+
+        # Si el monitor guardado ya no esta conectado, se conserva la opcion
+        if seleccion and seleccion > len(monitores):
+            combo.addItem(f"{seleccion} · (no conectado)", seleccion)
+
+        posicion = combo.findData(seleccion)
+        combo.setCurrentIndex(posicion if posicion >= 0 else 0)
+        combo.blockSignals(False)
+
+    def refrescar_monitores(self):
+        """
+        Vuelve a leer los monitores conectados y actualiza los combos,
+        conservando la seleccion de cada fila
+        """
+        for fila in self.filas_url:
+            self._llenar_combo(fila["combo"], fila["combo"].currentData() or 0)
+        self._actualizar_label_monitores()
+
+    def _actualizar_label_monitores(self):
+        """
+        Muestra cuantos monitores se detectaron y cuales son
+        """
+        monitores = self._monitores()
+        if not monitores:
+            self.label_monitores.setText("No se detectaron monitores.")
+            return
+
+        detalle = "   |   ".join(self._nombre_monitor(i, m) for i, m in enumerate(monitores))
+        cantidad = len(monitores)
+        plural = "pantalla detectada" if cantidad == 1 else "pantallas detectadas"
+        self.label_monitores.setText(f"{cantidad} {plural}:   {detalle}")
+
+    # -----------------------------------------------------------------
+    # Manejo de las filas de URL
+    # -----------------------------------------------------------------
+    def _agregar_fila_url(self, url="", monitor=0):
+        """
+        Crea una fila: check de seleccion + indice + URL + monitor asignado
+        :param url: str. Valor inicial del campo
+        :param monitor: int. Monitor guardado (0 = automatico)
+        """
+        fila = QWidget()
+        layout = QHBoxLayout(fila)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(10)
+
+        check = QCheckBox()
+        check.setToolTip("Seleccionar para eliminar")
+
+        indice = QLabel()
+        indice.setObjectName("indiceUrl")
+
+        entry = QLineEdit(url)
+        entry.setMinimumHeight(38)
+        entry.setPlaceholderText("https://ejemplo.com")
+
+        combo = QComboBox()
+        combo.setMinimumHeight(38)
+        combo.setCursor(Qt.PointingHandCursor)
+        combo.setToolTip("Monitor donde se abrirá esta URL")
+        self._llenar_combo(combo, monitor)
+
+        layout.addWidget(check)
+        layout.addWidget(indice)
+        layout.addWidget(entry, 1)
+        layout.addWidget(combo)
+
+        self.urls_layout.addWidget(fila)
+        self.filas_url.append({"widget": fila, "check": check, "entry": entry,
+                               "combo": combo, "indice": indice})
+        self._renumerar_filas()
+        return fila
+
+    def _renumerar_filas(self):
+        """
+        Actualiza el numero de ventana mostrado en cada fila
+        """
+        for numero, fila in enumerate(self.filas_url, start=1):
+            fila["indice"].setText(str(numero))
+
+    def add_url(self):
+        """
+        Agrega un nuevo campo de URL vacio al final de la lista
+        """
+        fila = self._agregar_fila_url("", 0)
+        fila.findChild(QLineEdit).setFocus()
+
+    def delete_urls(self):
+        """
+        Elimina todas las filas marcadas con el check
+        """
+        seleccionadas = [f for f in self.filas_url if f["check"].isChecked()]
+
+        if not seleccionadas:
+            QMessageBox.information(self, "Eliminar URL",
+                                    "Marque al menos una URL para eliminarla.")
+            return
+
+        if len(seleccionadas) == len(self.filas_url):
+            QMessageBox.warning(self, "Eliminar URL",
+                                "Debe quedar al menos una URL configurada.")
+            return
+
+        respuesta = QMessageBox.question(
+            self, "Eliminar URL",
+            f"¿Eliminar {len(seleccionadas)} URL(s) seleccionada(s)?",
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if respuesta != QMessageBox.Yes:
+            return
+
+        for fila in seleccionadas:
+            self.urls_layout.removeWidget(fila["widget"])
+            fila["widget"].setParent(None)
+            fila["widget"].deleteLater()
+            self.filas_url.remove(fila)
+
+        self._renumerar_filas()
+
+    def _obtener_datos(self):
+        """
+        Devuelve las URLs con su monitor asignado.
+        Si hay campos vacios devuelve None y avisa, para no perder filas en silencio.
+        :return: list[dict] | None
+        """
+        datos = []
+        vacias = 0
+        for fila in self.filas_url:
+            texto = fila["entry"].text().strip()
+            if texto:
+                datos.append({"url": self._normalizar_url(texto),
+                              "monitor": fila["combo"].currentData() or 0})
+            else:
+                vacias += 1
+
+        if vacias:
+            QMessageBox.warning(
+                self, "Guardar",
+                f"Hay {vacias} campo(s) de URL vacío(s).\n\n"
+                "Escriba una dirección en cada campo o márquelo y use Eliminar. "
+                "Los campos vacíos no se pueden guardar porque cada pantalla "
+                "necesita una URL de inicio.")
+            return None
+
+        return datos
+
+    def _normalizar_url(self, url):
+        """
+        Agrega el esquema http:// si la URL no lo trae
+        """
+        if "://" not in url and not url.startswith("file:"):
+            return "http://" + url
+        return url
+
+    # -----------------------------------------------------------------
+    # Lectura / escritura del archivo de pantallas
+    # -----------------------------------------------------------------
+    def _ruta_pantallas(self):
+        """
+        Resuelve la ruta del archivo json de pantallas a partir de config.json
+        :return: str. Ruta absoluta
+        """
+        path = os.path.expanduser('~') + "/.config/Ciel/C-Media_Player/configs/config.json"
+        with open(path, "r") as file:
+            settings = json.loads(file.read())
+
         ruta = settings["Ruta"]
         if ruta.startswith("$"):
-            var_end = ruta.find("/")
-            var = os.environ[ruta[1:var_end]]
-            ruta = var + ruta[var_end:]
+            var = os.environ[ruta[1:ruta.find("/")]]
+            ruta = var + ruta[ruta.find("/"):]
         return ruta
 
+    def _localizar_controles_web(self, settings):
+        """
+        Busca todos los controles de navegador web del archivo de pantallas
+        :param settings: dic. Contenido del archivo de pantallas
+        :return: list[tuple]. [(indice_pantalla, indice_control), ...]
+        """
+        ubicaciones = []
+        for i, pantalla in enumerate(settings.get("Pantallas", [])):
+            for j, control in enumerate(pantalla.get("Controles", [])):
+                if CONTROL_WEB in control.get("NombreArchivo", ""):
+                    ubicaciones.append((i, j))
+        return ubicaciones
+
     def get_settings(self):
-        """Carga la configuracion desde el archivo .ccmj."""
+        """
+        Obtiene la configuracion del archivo json y la guarda en atributos de la clase
+        """
         try:
-            path = self._get_config_path()
-            with open(path, "r", encoding="utf-8-sig") as f:
-                settings = json.load(f)
-            for pantalla in settings["Pantallas"]:
-                for controller in pantalla["Controles"]:
-                    if "Control.NavegadorWebChrome.dll" in controller["NombreArchivo"]:
-                        self.setEnabled(True)
-                        self.url          = controller["ObjetoBase"].get("UrlInicio", "")
-                        self.nav_bar = controller["ObjetoBase"]["MostrarBarraNavegacion"]
-                        self.url_terminal = controller["ObjetoBase"].get("UrlTerminal", "")
+            ruta = self._ruta_pantallas()
+            with open(ruta, "r", encoding="utf-8-sig") as file:
+                settings = json.load(file)
         except Exception as e:
-            print(f"[WebTabFrame] get_settings error: {e}")
+            logging.error("WebTab - lectura inicial: " + str(e))
+            return
+
+        for pantalla in settings.get("Pantallas", []):
+            for controller in pantalla.get("Controles", []):
+                if CONTROL_WEB in controller.get("NombreArchivo", ""):
+                    self.setEnabled(True)
+                    base = controller.get("ObjetoBase", {})
+                    self.pantallas_web.append({
+                        "url": base.get("UrlInicio", ""),
+                        "monitor": pantalla.get(LLAVE_MONITOR, 0)
+                    })
+                    self.nav_bar = base.get("MostrarBarraNavegacion", False)
 
     def save_settings(self):
-        """Guarda la URL, nav_bar y URL terminal en el archivo .ccmj."""
+        """
+        Guarda las URLs y su monitor en el archivo de pantallas.
+        - Actualiza los controles web existentes.
+        - Crea una pantalla nueva (clonando la primera pantalla web) por cada URL extra.
+        - Elimina los controles/pantallas sobrantes.
+        - Verifica el resultado releyendo el archivo.
+        """
+        datos = self._obtener_datos()
+        if datos is None:
+            return
+        if not datos:
+            QMessageBox.warning(self, "Guardar", "Debe ingresar al menos una URL válida.")
+            return
+
         try:
-            path = self._get_config_path()
-
-            with open(path, "r", encoding="utf-8-sig") as f:
-                settings = json.load(f)
-
-            for pantalla in settings["Pantallas"]:
-                for controller in pantalla["Controles"]:
-                    if "Control.NavegadorWebChrome.dll" in controller["NombreArchivo"]:
-                        controller["ObjetoBase"]["UrlInicio"]             = self.url_entry.text().strip()
-                        controller["ObjetoBase"]["MostrarBarraNavegacion"] = self.nav_bar_button.isChecked()
-        
-                        controller["ObjetoBase"]["UrlTerminal"]            = self.url_entry_terminal.text().strip()
-
-            with open(path, "w", encoding="utf-8-sig") as f:
-                json.dump(settings, f, ensure_ascii=False)
-
-            # Sincronizar con el tab de terminales
-            url_terminal = self.url_entry_terminal.text().strip()
-            if self._terminal_tab and url_terminal:
-                self._terminal_tab.set_api_base(url_terminal, reload=True)
-
+            ruta = self._ruta_pantallas()
+            with open(ruta, "r", encoding="utf-8-sig") as file:
+                settings = json.load(file)
         except Exception as e:
-            print(f"[WebTabFrame] save_settings error: {e}")
-            QMessageBox.critical(self, "Error al guardar", str(e))
+            logging.error("WebTab - lectura: " + str(e))
+            QMessageBox.critical(self, "Guardar",
+                                 "No se pudo leer el archivo de pantallas.\n" + str(e))
+            return
+
+        ubicaciones = self._localizar_controles_web(settings)
+        if not ubicaciones:
+            QMessageBox.warning(self, "Guardar",
+                                "El archivo de pantallas no contiene un control de navegador web.")
+            return
+
+        nav = self.nav_bar_button.isChecked()
+
+        # Plantillas para clonar pantallas nuevas
+        i0, j0 = ubicaciones[0]
+        plantilla_pantalla = copy.deepcopy(settings["Pantallas"][i0])
+        plantilla_control = copy.deepcopy(settings["Pantallas"][i0]["Controles"][j0])
+
+        # 1. Actualizar los controles existentes que siguen teniendo URL
+        for k, (i, j) in enumerate(ubicaciones[:len(datos)]):
+            base = settings["Pantallas"][i]["Controles"][j].setdefault("ObjetoBase", {})
+            base["UrlInicio"] = datos[k]["url"]
+            base["MostrarBarraNavegacion"] = nav
+            settings["Pantallas"][i][LLAVE_MONITOR] = datos[k]["monitor"]
+
+        # 2. Eliminar los sobrantes (de atras hacia adelante para no correr indices)
+        for i, j in reversed(ubicaciones[len(datos):]):
+            del settings["Pantallas"][i]["Controles"][j]
+            if not settings["Pantallas"][i]["Controles"] and len(settings["Pantallas"]) > 1:
+                del settings["Pantallas"][i]
+
+        # 3. Crear pantallas nuevas para las URLs adicionales
+        for extra in datos[len(ubicaciones):]:
+            nueva_pantalla = copy.deepcopy(plantilla_pantalla)
+            nuevo_control = copy.deepcopy(plantilla_control)
+            nuevo_control.setdefault("ObjetoBase", {})
+            nuevo_control["ObjetoBase"]["UrlInicio"] = extra["url"]
+            nuevo_control["ObjetoBase"]["MostrarBarraNavegacion"] = nav
+            nueva_pantalla["Controles"] = [nuevo_control]
+            nueva_pantalla[LLAVE_MONITOR] = extra["monitor"]
+            settings["Pantallas"].append(nueva_pantalla)
+
+        # 4. Renumerar pantallas: el Player espera ScreenNumber empezando en 1
+        titulo_base = plantilla_pantalla.get("TitleName", "C-Media Player")
+        for numero, pantalla in enumerate(settings["Pantallas"], start=1):
+            pantalla["ScreenNumber"] = numero
+            if numero > 1 and not pantalla.get("TitleName"):
+                pantalla["TitleName"] = f"{titulo_base} ({numero})"
+
+        # 5. Escritura atomica: se escribe un temporal y se reemplaza
+        try:
+            temporal = ruta + ".tmp"
+            with open(temporal, "w", encoding="utf-8-sig") as file:
+                json.dump(settings, file, ensure_ascii=False)
+            os.replace(temporal, ruta)
+        except Exception as e:
+            logging.error("WebTab - escritura: " + str(e))
+            QMessageBox.critical(self, "Guardar",
+                                 "No se pudo guardar el archivo de pantallas.\n" + str(e))
+            return
+
+        # 6. Aviso si se asignaron monitores que no estan conectados
+        conectados = len(self._monitores())
+        faltantes = sorted({d["monitor"] for d in datos if d["monitor"] > conectados})
+
+        mensaje = f"Configuración guardada. {len(datos)} ventana(s) web."
+        if faltantes:
+            mensaje += ("\n\nAtención: el monitor "
+                        + ", ".join(str(m) for m in faltantes)
+                        + " no está conectado en este momento. "
+                          "Esas ventanas se abrirán en el monitor principal "
+                          "hasta que se conecte.")
+
+        logging.info(f"WebTab - guardado en {ruta} | ventanas: {len(datos)} | "
+                     f"monitores conectados: {conectados}")
+
+        QMessageBox.information(self, "Guardar", mensaje)
 
 
 
