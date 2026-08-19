@@ -78,13 +78,6 @@ serial.tools.list_ports_posix, PySide6.QtWebEngineCore,
 PySide6.QtWebEngineWidgets, cryptography.fernet, cv2, netifaces, psutil, gtts
 ```
 
-Las librerías de Qt están excluidas de UPX porque en ARM64 UPX las corrompe:
-
-```
-upx_exclude=["libQt6*.so*", "libPySide6*.so*", "Qt6*.so*"]
-```
-
----
 
 ## Información técnica
 
