@@ -7,8 +7,6 @@ a = Analysis(
         "App",
     ],
     binaries=[
-        # Librerías serial necesarias en ARM64 que PyInstaller no detecta solo
-        ("/usr/lib/aarch64-linux-gnu/libwebp.so.6", "."),
     ],
     datas=[
         # Incluir carpetas del proyecto
@@ -21,7 +19,8 @@ a = Analysis(
         "PySide6.QtWebEngineWidgets",
         "PySide6.QtWebEngine",
         "PySide6.QtPrintSupport",
-        # Serial - crítico para lector Honeywell/Magellan en /dev/ttyACM0
+
+        # Serial
         "serial",
         "serial.serialposix",
         "serial.serialutil",
@@ -29,11 +28,14 @@ a = Analysis(
         "serial.tools",
         "serial.tools.list_ports",
         "serial.tools.list_ports_posix",
+
         # Otros módulos del proyecto
         "cv2",
         "netifaces",
         "psutil",
         "gtts",
+
+        # Cryptography
         "cryptography",
         "cryptography.fernet",
         "cryptography.hazmat",
@@ -65,7 +67,7 @@ exe = EXE(
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
-    console=True,   # Mantener True para ver errores; cambiar a False en producción
+    console=True,
     disable_windowed_traceback=False,
     target_arch=None,
     codesign_identity=None,
@@ -80,7 +82,7 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[
-        # Excluir librerías Qt de UPX — en ARM64 UPX las corrompe
+        # Excluir librerías Qt de UPX
         "libQt6*.so*",
         "libPySide6*.so*",
         "Qt6*.so*",
