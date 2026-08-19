@@ -172,12 +172,6 @@ class WebTabFrame(QWidget):
         titulo_url.setObjectName("tituloSeccion")
         self.mainLayout.addWidget(titulo_url)
 
-        ayuda = QLabel("Cada URL abre una ventana del reproductor. Elija en qué "
-                       "monitor se muestra, o déjelo en Automático para repartirlas "
-                       "en orden. Marque las casillas de las URLs que desee eliminar.")
-        ayuda.setObjectName("ayuda")
-        ayuda.setWordWrap(True)
-        self.mainLayout.addWidget(ayuda)
 
         # Monitores detectados
         self.label_monitores = QLabel()
