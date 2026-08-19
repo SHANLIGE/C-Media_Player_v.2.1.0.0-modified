@@ -35,8 +35,7 @@ from PySide6.QtNetwork import QSslCertificate, QSslSocket, QSslConfiguration
 
 
 # Pantalla y nombre del boton oculto de cierre dentro del recurso.
-# El boton se llama "Cerrar" en todos los players; si alguna sede usa otra
-# pantalla, agregarla a esta lista y se enganchan todas.
+# El boton se llama "Cerrar" en todos los players; si alguna sede usa otra pantalla, agregarla a esta lista y se enganchan todas.
 BOTONES_CIERRE = [
     ("Utilidad", "Cerrar"),
 ]
@@ -238,9 +237,7 @@ class WebViewFrame(QWidget):
         self.apis["network"] = NetworkController(self.settings["UrlInicio"], self.view, self.apis["speech"])
 
         # NUEVO: controlador de cierre.
-        # Se pasa None como player: AppController cierra las ventanas de
-        # nivel superior, lo que dispara Player.closeEvent() y con el el
-        # cierre de las pantallas secundarias.
+        
         self.apis["app"] = AppController()
 
     def close_speech_synth(self):

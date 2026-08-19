@@ -7,34 +7,6 @@ from PySide6.QtCore import QMetaObject, Qt, Q_ARG
 class Event(object):
     """
     Envio de eventos desde Python hacia el player web.
-
-    Cambio principal frente a la version anterior
-    ---------------------------------------------
-    El player registra cada lector de codigo de barras en una rama distinta:
-
-        Ciel.MPC.WebPlayer.Controles.Omnidireccional.Honeywell
-        Ciel.MPC.WebPlayer.Controles.Omnidireccional.Newland
-        ... etc
-
-    y cada rama solo tiene 'controlActual' poblado si ESE control existe en
-    el recurso cargado. Las funciones estaticas del player hacen:
-
-        X.controlActual && X.controlActual.EstablecerCodigo(n)
-
-    o sea que si el recurso trae otro lector la llamada NO hace nada y NO
-    reporta error. Ese era el sintoma: mismo .py y mismo player, pero
-    Recursos/TouchLinux trae el control Honeywell y Recursos/TouchSaludTotal
-    trae el control Newland.
-
-    Solucion: awake_lector() genera un JS que busca en tiempo de ejecucion
-    cual de los lectores tiene controlActual y llama al metodo sobre ESA
-    instancia. Asi el mismo controlador Python sirve en cualquier recurso.
-
-    Ventaja adicional de llamar el metodo de instancia y no el estatico:
-      - no pasa por el encoding $#$ / #$# / %# (que ademas reemplaza las
-        llaves sin flag global, o sea solo la primera ocurrencia)
-      - evita el filtro de MAGUELLAN, que descarta la trama si la pantalla
-        no esta exactamente en display:block
     """
 
     BASE_JS = "Ciel.MPC.WebPlayer.Controles."
@@ -106,15 +78,6 @@ class Event(object):
         """
         Resuelve el lector a usar y llama el metodo sobre su instancia.
 
-        Un recurso puede traer VARIOS controles de lector (p.ej. un
-        "Lector Newland" y un "Lector Codigo de Barras (2D Honeywell)1").
-        Tomar el primero con controlActual es una loteria: si cae en el que
-        no tiene acciones configuradas, el player recibe el documento y no
-        hace nada.
-
-        Por eso se elige el control cuyo arreglo de acciones para ESTE tipo
-        de documento tenga mayor longitud. Si ninguno tiene acciones se usa
-        el primero y se avisa por consola.
         """
         cuerpo = (
             "var O=Ciel.MPC.WebPlayer.Controles.Omnidireccional,"
@@ -245,13 +208,8 @@ class Event(object):
 
     def notificar_error(self, mensaje):
         """
-        El player NO tiene ninguna funcion 'NotificarError'. Llamarla
-        lanzaba TypeError que runJavaScript se tragaba, o sea que todos
-        los avisos al operador estaban muertos.
-
-        Aqui se deja el mensaje en consola y se invoca, si existe, un hook
-        opcional window.LectorNotificarError(msg) que se puede definir en
-        el recurso para mostrarlo en pantalla.
+        Notifica un error al player, que lo muestra en pantalla y lo loguea
+        en la consola de JS.
         """
         cuerpo = (
             "var m={msg};console.warn('LECTOR:',m);"
@@ -296,8 +254,6 @@ class Event(object):
 
     def unloaded(self):
         """
-        Llamar en loadStarted / navegacion. Sin esto, tras un reload del
-        player los eventos se mandan a una pagina que ya no tiene el
-        objeto Ciel y se pierden.
+        Marca el player como no listo y vacia la cola de eventos.
         """
         self.isLoaded = False

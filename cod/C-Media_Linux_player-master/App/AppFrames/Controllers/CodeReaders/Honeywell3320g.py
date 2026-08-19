@@ -1,3 +1,4 @@
+
 import base64
 import json
 import re
@@ -90,14 +91,18 @@ class BarCodeReader():
 
     def receiveData(self):
         """
-        Lee bytes del puerto en un bucle continuo (presentation mode).
-        Acumula hasta encontrar el sufijo configurado, luego procesa.
+        Acumula bytes del puerto serial.
+
+        Delimitadores:
+          1. SUFIJO = CRLF -> tramas de texto (barcode, cada linea MRZ, QR).
+          2. Timeout 200 ms sin bytes -> fin de trama de imagen JPEG u otras
+             tramas grandes que el lector no termina con CRLF.
         """
         buffer = bytearray()
-        TIMEOUT_INACTIVIDAD = 0.15  # segundos sin bytes nuevos → fin de trama
 
         while not self.killThread:
             try:
+                self.reader.timeout = TIMEOUT_INACTIVIDAD
                 byte = self.reader.read(1)
             except Exception as e:
                 if self.killThread:
@@ -107,6 +112,12 @@ class BarCodeReader():
                 break
 
             if not byte:
+                # Timeout: procesar lo acumulado (p.ej. JPEG sin terminador)
+                if buffer:
+                    datos  = bytes(buffer)
+                    buffer = bytearray()
+                    self._despachar(datos)
+                    print("Lector: esperando siguiente lectura...")
                 continue
 
             buffer += byte
@@ -119,30 +130,29 @@ class BarCodeReader():
                     self._despachar(datos)
                     print("Lector Universal: esperando siguiente lectura...")
 
-    
+    def _despachar(self, datos: bytes):
+        """Llama a _procesar con manejo de excepciones centralizado."""
+        try:
+            self._procesar(datos)
+        except Exception as e:
+            print(f"Lector error procesando trama: {e}")
+            self._mrz_buffer.clear()
+            self.event.notificar_error("Error al interpretar la lectura")
 
-                try:
-                    self.procesar_datos(datos[0], datos[1:])
-                except Exception as e:
-                    print(f"Honeywell error procesando trama: {e}")
-                    self.event.awake(
-                        "NotificarError",
-                        [json.dumps("Error al interpretar la lectura")]
-                    )
-                    self.result = {
-                        "error": str(e),
-                        "byte": list(datos[1:])
-                    }
-                print("Esperando siguiente lectura...")
-
- 
-    def procesar_datos(self, prefix, byte):
+    def _procesar(self, datos: bytes):
         """
-        Despacha la trama según su tipo:
-          - MRZ nueva cédula / extranjería  → _procesar_mrz_td1
-          - Cédula antigua PDF417 (prefix=P) → bloque original
-          - QR / barcode simple              → EstablecerCodigo
-          - Cédula binaria prefix≠P          → _procesar_cedula_alternativa
+        Arbol de decision principal.
+
+        Orden de evaluacion:
+          0. Imagen JPEG cruda (SOI 0xFF 0xD8)
+          1. Code ID 'S' u 'O' al inicio (si el usuario activo Code ID Prefix)
+          2. Linea MRZ parcial -> acumular en _mrz_buffer
+          3. Bloque MRZ completo de una sola vez
+          4. PDF417 binario (prefix 'P' = 0x50)
+          5. Todo imprimible:
+             a. QR cedula nueva cifrado -> activar espera MRZ
+             b. Barcode / QR simple     -> EstablecerCodigo
+          6. Binario no-JPEG            -> _procesar_cedula_alternativa
         """
         print(f"Lector: trama recibida  len={len(datos)}  "
               f"prefix=0x{datos[0]:02X} ({chr(datos[0]) if 0x20<=datos[0]<=0x7E else '?'})")
@@ -160,13 +170,41 @@ class BarCodeReader():
             # 'O' + resto -> Passport OCR (MRZ TD3)
             return self._procesar_ocr_con_code_id(datos[1:], tipo_esperado="TD3")
 
-        # ── 3. QR / código de barras simple (todo imprimible)
-        all_printable = all(32 < elem < 127 for elem in full)
-        if all_printable:
+        # Lineas parciales MRZ
+        if self._es_linea_mrz_parcial(datos):
+            return self._acumular_linea_mrz(datos)
+
+        if self._mrz_buffer:
+            print(f"Lector: descartando buffer MRZ parcial ({len(self._mrz_buffer)} lineas) "
+                  f"- trama nueva no compatible")
+            self._mrz_buffer.clear()
+            self._mrz_tipo = None
+
+        if self._es_mrz_completo(datos):
+            self._esperando_mrz = False
+            return self._procesar_mrz_td1(datos)
+
+        # PDF417 CON Code ID 'P' (asi lo envia el lector del otro servidor)
+        if datos[0] == 0x50:
+            print("Lector: PDF417 con Code ID 'P'")
+            return self._procesar_cedula_pdf417(datos[1:])
+
+        # PDF417 SIN Code ID.
+        # La cedula colombiana amarilla son ~532 bytes. Si el lector no
+        # tiene activado el Code ID Prefix la trama llega cruda y antes
+        # caia en _procesar_cedula_alternativa, que la marcaba como
+        # TipoDocumento "2" (tarjeta de identidad) con offsets erroneos.
+        if len(datos) >= 400:
+            print(f"Lector: trama larga sin prefijo 'P' ({len(datos)} bytes) "
+                  f"-> PDF417 directo")
+            print(f"Lector: hex[0:64]  = {datos[:64].hex(' ')}")
+            print(f"Lector: byte[32:34] = {bytes(datos[32:34])!r}  "
+                  f"byte[48:50] = {bytes(datos[48:50])!r}")
+            return self._procesar_cedula_pdf417(datos)
+
+        if all(0x20 <= b <= 0x7E for b in datos):
             try:
-                result = full.decode("utf-8").strip()
-                self.event.awake("EstablecerCodigo", [json.dumps(result)])
-                return result
+                texto = datos.decode("utf-8").strip()
             except Exception:
                 return
 
@@ -194,27 +232,19 @@ class BarCodeReader():
     # ── Multi linea MRZ (OCR-B / Passport OCR) ─────────────────────────────
 
     def _es_linea_mrz_parcial(self, datos: bytes) -> bool:
-        """
-        Detecta si la trama es una LÍNEA INDIVIDUAL de un MRZ (no el bloque completo).
-
-        Criterios:
-          - Empieza con 'I' (0x49), que es la primera letra de 'ID' o 'IR'
-          - Es todo texto imprimible (incluyendo '<' = 0x3C y '\n'/0x0A como separador)
-          - Longitud total entre 85 y 100 bytes (3×30 + 2 separadores ≈ 92)
-        """
-        if len(full) < 85 or len(full) > 105:
+        largo = len(datos)
+        if largo not in range(28, 48):   # margen +-2 chars
             return False
-        if full[0] != ord('I'):
-            return False
-        # Permitir imprimibles + LF (0x0A) como separador de líneas MRZ
-        for b in full:
-            if b == 0x0A or b == 0x0D:
-                continue
-            if b < 0x20 or b > 0x7E:
+        # Solo caracteres MRZ validos
+        for b in datos:
+            if not (b == 0x3C or              # '<'
+                    0x41 <= b <= 0x5A or      # A-Z
+                    0x30 <= b <= 0x39 or      # 0-9
+                    b == 0x20):               # espacio
                 return False
         return True
 
-    def _procesar_mrz_td1(self, full: bytearray) -> dict:
+    def _acumular_linea_mrz(self, datos: bytes):
         """
         Agrega la linea recibida al buffer MRZ y, si esta completo, lo procesa.
 

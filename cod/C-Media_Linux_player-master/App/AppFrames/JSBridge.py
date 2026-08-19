@@ -74,10 +74,7 @@ class JSBridge(QtCore.QObject):
 
             self.page.runJavaScript(code)
 
-        # Se ejecuta en el hilo de eventos de Qt para no bloquear el callback
-        # del canal, y para garantizar que _call() se invoque una unica vez
-        # y que SIEMPRE se responda a la promesa JS (evita que el ticket
-        # quede a medio imprimir o en blanco por falta de resolucion).
+        # Se ejecuta en el hilo de la GUI para evitar errores de acceso a objetos Qt desde hilos secundarios
         QtCore.QTimer.singleShot(0, _call)
 
     def parse_api_js(self):
@@ -228,23 +225,14 @@ class JSBridge(QtCore.QObject):
         	window.api.speech.cancel_speech();
         }
 
-        // Se expone explicitamente como propiedad de "window" (no como un
-        // "class" de scope global) para que cualquier script de la pagina,
-        // sin importar cuando se ejecute, lo encuentre siempre en
-        // window.SpeechSynthesisUtterance. Ademas se protege contra
-        // redeclaracion: si parse_api_js() se vuelve a inyectar (recarga,
-        // reconexion, etc.) un "class NombreYaExistente" lanzaria
-        // SyntaxError: Identifier 'SpeechSynthesisUtterance' has already
-        // been declared y tumbaria TODO el script, como paso antes con el
+        // Se agrega compatibilidad con navegadores  
+
         // \\r\\n.
         if (typeof window.SpeechSynthesisUtterance === 'undefined') {
             window.SpeechSynthesisUtterance = function (text) {
                 this.text = text;
             };
         }
-        
-	var text = "JSBridge";
-    alert(text + " cargado");
 
             """
             print("Generando funciones para el puente JSBridge")
