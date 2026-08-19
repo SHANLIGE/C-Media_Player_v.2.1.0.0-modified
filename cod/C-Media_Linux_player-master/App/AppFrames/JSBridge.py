@@ -242,7 +242,6 @@ class JSBridge(QtCore.QObject):
                 this.text = text;
             };
         }
-
             """
             print("Generando funciones para el puente JSBridge")
             return js % funs
