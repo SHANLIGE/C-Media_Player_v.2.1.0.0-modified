@@ -5,6 +5,31 @@ from .TerminalTabFrame import TerminalTabFrame
 from .ToggleButton import ToggleButton
 import json
 import os
+import copy
+import logging
+
+
+# ---------------------------------------------------------------------------
+# Paleta de colores
+# ---------------------------------------------------------------------------
+COLOR_NARANJA = "#f99f04"
+COLOR_NARANJA_HOVER = "#ff8c00"
+COLOR_NARANJA_PRESSED = "#f99f04"
+COLOR_ROJO = "#d9534f"
+COLOR_ROJO_HOVER = "#c9302c"
+COLOR_FONDO = "#FFFFFF"
+COLOR_INPUT_BG = "#F2F4F6"
+COLOR_BORDE = "#E4E6E9"
+COLOR_TEXTO = "#313336"
+COLOR_TEXTO_SUAVE = "#5B6066"
+COLOR_BACKGROUND = "#F2F4F6"
+COLOR_SCROLLBAR_BG = "#D0D0D3"
+
+# Nombre del archivo del control web dentro del JSON de pantallas
+CONTROL_WEB = "Control.NavegadorWebChrome.dll"
+
+# Llave que se agrega a cada pantalla para recordar en que monitor va
+LLAVE_MONITOR = "MonitorAsignado"
 
 
 class WebTabFrame(QWidget):
@@ -16,6 +41,7 @@ class WebTabFrame(QWidget):
         self.url = ""
         self.url_terminal = ""
         self.nav_bar = False
+        self.filas_url = []       # [{"widget","check","entry","combo","indice"}, ...]
         self.get_settings()
 
         # Fondo
@@ -149,3 +175,4 @@ class WebTabFrame(QWidget):
 
 
 
+   

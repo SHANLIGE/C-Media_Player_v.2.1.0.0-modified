@@ -1,5 +1,4 @@
 import usb.core #Libreria que permite hacer la conexion con puertos Usb
-import usb.util #Libreria que permite leer y escribir sobre puertos usb
 import logging #Libreria de logging
 
 class UsbConnection():

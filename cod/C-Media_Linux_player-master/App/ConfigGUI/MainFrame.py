@@ -1,13 +1,21 @@
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 from PySide6.QtGui import *
-
+from PySide6.QtWidgets import QApplication, QLabel, QLineEdit, QCheckBox, QPushButton, QVBoxLayout, QHBoxLayout, QGridLayout, QTabWidget, QWidget, QFrame
 from .CodeReaderTabFrame import CodeReaderTabFrame
 from .GeneralTabFrame import GeneralTabFrame
 from .WebTabFrame import WebTabFrame
 from .PrinterTabFrame import PrinterTabFrame
 from .TerminalTabFrame import TerminalTabFrame
 import os
+
+
+
+COLOR_NARANJA = "#f99f04"
+COLOR_NARANJA_HOVER = "#ff8c00"
+COLOR_NARANJA_PRESSED = "#f99f04"
+
+
 
 class MainFrame(QWidget):
     """Clase de pantalla principal (configuracion)"""
@@ -28,13 +36,10 @@ class MainFrame(QWidget):
         self.setPalette(bg)
 
         self.mainLayout = QGridLayout()
-        self.mainLayout.setContentsMargins(10, 10, 10, 10)
+        self.mainLayout.setContentsMargins(15, 36, 15, 15)
         self.setLayout(self.mainLayout)
 
-        # Crear TerminalTabFrame primero, luego pasarlo a WebTabFrame
-        self.terminal_Tab = TerminalTabFrame()
-        self.webTab = WebTabFrame(terminal_tab=self.terminal_Tab)
-
+        #TabFrame
         self.tabWidget = QTabWidget(self)
         self.generalTab = GeneralTabFrame()
         self.printerTab = PrinterTabFrame()

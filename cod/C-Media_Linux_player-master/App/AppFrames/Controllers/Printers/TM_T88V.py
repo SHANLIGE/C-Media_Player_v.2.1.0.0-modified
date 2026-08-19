@@ -20,16 +20,26 @@ class Printer():
         """
         Constructor de clase
         :param device: dic. Datos de la impresora
+        Campos opcionales en device:
+          'AnchoPapel': int  — ancho del papel en mm (default 80).
+                              Usar 57 para impresoras SAT de papel estrecho.
         """
 
         self.__cambios = {}
         self.__version = None
+        self._logo_tx = None  # ultima definicion del logo (GS *) enviada por cargar()
         self.event = Event("Impresion")
-        self.device = device  
+        self.device = device
+
+        papel_mm = int(device.get("AnchoPapel", 80))
+        margen_mm = 4
+
+        self._dx_puntos = max(200, int((papel_mm - 2.7 * margen_mm) * 200 / 25.4))
+        self._dx_L = self._dx_puntos & 0xFF
+        self._dx_H = (self._dx_puntos >> 8) & 0xFF
 
   
         self.printer = None
-       
 
         #Extraer configuración real
         config = device.get("PuertoSerial", {})
@@ -38,8 +48,8 @@ class Printer():
         puerto = config.get("NombrePuerto", "/dev/ttyUSB0")
 
         try:
-            if puerto == "/dev/ttyUSB0":
-                    self.printer = UsbConnection(0x4030, 0x6001)
+            if config.get("NombrePuerto") == "/dev/ttyUSB0":
+                    self.printer = UsbConnection(0x0403, 0x6001)
             else:
                     self.printer = SerialConnection(
                         puerto,
@@ -149,6 +159,20 @@ class Printer():
                 lineas_lista[13],
                 lineas_lista[14],
             ], logo_bytes)
+
+            # Reenviar la definicion del logo con CADA ticket.
+            # Ticket() emite GS / (imprimir imagen descargada), pero la imagen
+            # solo se define con GS * dentro de cargar(). Esa definicion vive en
+            # la RAM de la impresora y se pierde con ESC @ o al cortar energia:
+            # si eso pasa, GS / no imprime nada (caso Epson). Reenviarla aca
+            # hace que el logo no dependa del estado previo de la impresora.
+            if logo is not None:
+                try:
+                    self._logo_tx = self.Logo(logo)
+                except Exception as e:
+                    print("No se pudo decodificar el logo:", e)
+            if self._logo_tx is not None:
+                tx = bytearray(self._logo_tx) + tx
 
             # =========================
             # FIX CRÍTICO DE IMPRESIÓN
@@ -261,10 +285,11 @@ class Printer():
         
    
         Tx = self.Logo(logo)
+        self._logo_tx = Tx  # se guarda para reenviarla junto con cada ticket
         self.printer.write(Tx) 
         return Tx
 
-    def Ticket(self, lineas, logo_bytes=None):
+    def Ticket(self, lineas):
 
         """
         Crea el formato del Ticket
@@ -328,6 +353,9 @@ class Printer():
         tx.append(0x4C)
 
         nempty = (None, '')
+
+        # Alto dinamico del area (2 bytes finales de ESC W) segun lineas presentes
+        _ay_L, _ay_H = self._alto_area(lineas, nempty)
         
         if tamano > 5:
             if lineas[4] not in nempty or lineas[5] not in nempty:
@@ -335,7 +363,7 @@ class Printer():
                     #Verifica que las líneas de texto y código qr existan
                     if lineas[13] not in nempty or lineas[14] not in nempty:
                         if (tamano4 == "big" and tamano5 == "big") or (tamano4 == "big" and tamano6 == "big") or (tamano5 == "big" and tamano6 == "big"):
-                            tx += bytearray([0x1B, 0x57, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02,0xF0, 0x04]) #seleccion area de impresion
+                            tx += bytearray([0x1B, 0x57, 0x00, 0x00, 0x00, 0x00, self._dx_L, self._dx_H, 0xF0, 0x04]) #seleccion area de impresion
                             if not(tamano5 == "big"):
                                 interlineado = (0x40, 0x60, 0x60)
                             elif not(tamano6 == "big"):
@@ -343,7 +371,7 @@ class Printer():
                             else:
                                 interlineado = (0x60, 0x60, 0x60)
                         elif tamano4 == "big" or tamano5 == "big" or tamano6 == "big":
-                            tx += bytearray([0x1B, 0x57, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02,0xC0, 0x04]) #seleccion area de impresion
+                            tx += bytearray([0x1B, 0x57, 0x00, 0x00, 0x00, 0x00, self._dx_L, self._dx_H, 0xC0, 0x04]) #seleccion area de impresion
                             if tamano4 == "big":
                                 interlineado = (0x40, 0x40, 0x30)
                             elif tamano5 != "big":
@@ -351,12 +379,12 @@ class Printer():
                             else:
                                 interlineado = (0x40, 0x60, 0x30)
                         else:
-                            tx += bytearray([0x1B, 0x57, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02,0x70, 0x04]) #seleccion area de impresion
+                            tx += bytearray([0x1B, 0x57, 0x00, 0x00, 0x00, 0x00, self._dx_L, self._dx_H, 0x70, 0x04]) #seleccion area de impresion
                             interlineado = (0x30, 0x30, 0x30)
                     #No existen lineas configuradas para qr
                     else:
                         if (tamano4 == "big" and tamano5 == "big") or (tamano4 == "big" and tamano6 == "big") or (tamano6 == "big" and tamano5 == "big"):
-                            tx += bytearray([0x1B, 0x57, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02,0x8E, 0x03]) #seleccion area de impresion
+                            tx += bytearray([0x1B, 0x57, 0x00, 0x00, 0x00, 0x00, self._dx_L, self._dx_H, 0x8E, 0x03]) #seleccion area de impresion
                             if not (tamano5 == "big"):
                                 interlineado = (0x40, 0x60, 0x60)
                             elif not (tamano6 == "big"):
@@ -364,7 +392,7 @@ class Printer():
                             else:
                                 interlineado = (0x60, 0x60, 0x60)
                         elif tamano4 == "big" or tamano5 == "big" or tamano6 == "big":
-                            tx += bytearray([0x1B, 0x57, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02,0x5E, 0x03]) #seleccion area de impresion
+                            tx += bytearray([0x1B, 0x57, 0x00, 0x00, 0x00, 0x00, self._dx_L, self._dx_H, 0x5E, 0x03]) #seleccion area de impresion
                             if tamano4 == "big":
                                 interlineado = (0x40, 0x40, 0x30)
                             elif tamano5 == "big":
@@ -372,12 +400,12 @@ class Printer():
                             else:
                                 interlineado = (0x40, 0x60, 0x30)
                         else:
-                            tx += bytearray([0x1B, 0x57, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02,0x3E, 0x03]) #seleccion area de impresion
+                            tx += bytearray([0x1B, 0x57, 0x00, 0x00, 0x00, 0x00, self._dx_L, self._dx_H, 0x3E, 0x03]) #seleccion area de impresion
                             interlineado = (0x30, 0x30, 0x30)
                 #llegan menos de 13 lineas            
                 else:
                     if (tamano4 == "big" and tamano5 == "big") or (tamano4 == "big" and tamano6 == "big") or (tamano6 == "big" and tamano5 == "big"):
-                        tx += bytearray([0x1B, 0x57, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02,0x8E, 0x03]) #seleccion area de impresion
+                        tx += bytearray([0x1B, 0x57, 0x00, 0x00, 0x00, 0x00, self._dx_L, self._dx_H, 0x8E, 0x03]) #seleccion area de impresion
                         if not (tamano5 == "big"):
                             interlineado = (0x40, 0x60, 0x60)
                         elif not (tamano6 == "big"):
@@ -385,7 +413,7 @@ class Printer():
                         else:
                             interlineado = (0x60, 0x60, 0x60)
                     elif tamano4 == "big" or tamano5 == "big" or tamano6 == "big":
-                        tx += bytearray([0x1B, 0x57, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02,0x5E, 0x03]) #seleccion area de impresion
+                        tx += bytearray([0x1B, 0x57, 0x00, 0x00, 0x00, 0x00, self._dx_L, self._dx_H, 0x5E, 0x03]) #seleccion area de impresion
                         if tamano4 == "big":
                             interlineado = (0x40, 0x40, 0x30)
                         elif tamano5 == "big":
@@ -393,7 +421,7 @@ class Printer():
                         else:
                             interlineado = (0x40, 0x60, 0x30)
                     else:
-                        tx += bytearray([0x1B, 0x57, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02,0x3E, 0x03]) #seleccion area de impresion
+                        tx += bytearray([0x1B, 0x57, 0x00, 0x00, 0x00, 0x00, self._dx_L, self._dx_H, 0x3E, 0x03]) #seleccion area de impresion
                         interlineado = (0x30, 0x30, 0x30)
 
             #las lineas 4 y 5 estan vacias
@@ -401,23 +429,22 @@ class Printer():
                 if tamano > 13:
                     #Verifica que las lineas de text y codigo qr existan
                     if lineas[13] not in nempty or lineas[14] not in nempty:
-                        tx += bytearray([0x1B, 0x57, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02,0xBE, 0x02]) #seleccion area de impresion
+                        tx += bytearray([0x1B, 0x57, 0x00, 0x00, 0x00, 0x00, self._dx_L, self._dx_H, 0xBE, 0x02]) #seleccion area de impresion
                         interlineado = (0x30, 0x30, 0x30)
                     #No existeb las lineas configuradas para qr
                     else:
-                        tx += bytearray([0x1B, 0x57, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02,0xBE, 0x02]) #seleccion area de impresion
+                        tx += bytearray([0x1B, 0x57, 0x00, 0x00, 0x00, 0x00, self._dx_L, self._dx_H, 0xBE, 0x02]) #seleccion area de impresion
                         interlineado = (0x30, 0x30, 0x30)
                 #llegan menos de 13 lineas
                 else:
-                    tx += bytearray([0x1B, 0x57, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02,0xBE, 0x02]) #seleccion area de impresion
+                    tx += bytearray([0x1B, 0x57, 0x00, 0x00, 0x00, 0x00, self._dx_L, self._dx_H, 0xBE, 0x02]) #seleccion area de impresion
                     interlineado = (0x30, 0x30, 0x30)
         else:
-            tx += bytearray([0x1B, 0x57, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02,0x9E, 0x02]) #seleccion area de impresion
+            tx += bytearray([0x1B, 0x57, 0x00, 0x00, 0x00, 0x00, self._dx_L, self._dx_H, 0x9E, 0x02]) #seleccion area de impresion
             interlineado = (0x30, 0x30, 0x30)
         tx += bytearray([0x1B, 0x54, 0x02]) #Direccion de impresion de derecha izquierda
         tx += bytearray([0x1D, 0x5C, 0x40, 0x02]) #Posicion vertical relativa
-        if logo_bytes:
-            tx += logo_bytes #Imprimir logo (GS v 0, autocontenido: ancho+alto+pixeles)
+        tx += bytearray([0x1D, 0x2F, 0x33]) #Imprimir Logo cuádruple
         if tamano > 5:
             # Verifica que la linea 5 o 6 tenga texto que imprimir
             if lineas[5] not in nempty or lineas[4] not in nempty:
@@ -425,11 +452,11 @@ class Printer():
                     # Verifica que las líneas de texto y código qr existan
                     if lineas[13] not in nempty or lineas[14] not in nempty:
                         if (tamano4 == "big" and tamano5 == "big") or (tamano4 == "big" and tamano6 == "big") or (tamano6 == "big" and tamano5 == "big"):
-                            tx += bytearray([0x1B, 0x57, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xF0, 0x04]) # seleccionar area de impresion
+                            tx += bytearray([0x1B, 0x57, 0x00, 0x00, 0x00, 0x00, self._dx_L, self._dx_H, 0xF0, 0x04]) # seleccionar area de impresion
                         elif tamano4 == "big" or tamano5 == "big" or tamano6 == "big":
-                            tx += bytearray([0x1B, 0x57, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xC0, 0x04]) # seleccionar area de impresion
+                            tx += bytearray([0x1B, 0x57, 0x00, 0x00, 0x00, 0x00, self._dx_L, self._dx_H, 0xC0, 0x04]) # seleccionar area de impresion
                         else:
-                            tx += bytearray([0x1B, 0x57, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x70, 0x04]) # seleccionar area de impresion
+                            tx += bytearray([0x1B, 0x57, 0x00, 0x00, 0x00, 0x00, self._dx_L, self._dx_H, 0x70, 0x04]) # seleccionar area de impresion
                         # No existen líneas configuradas para qr
                     else:
                 
@@ -452,7 +479,7 @@ class Printer():
                 if tamano > 13:
                     # Verifica que las líneas de texto y código qr existan
                     if lineas[13] not in nempty or lineas[14] not in nempty:
-                        tx += bytearray([0x1B, 0x57, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xBE, 0x02]) # seleccionar area de impresion
+                        tx += bytearray([0x1B, 0x57, 0x00, 0x00, 0x00, 0x00, self._dx_L, self._dx_H, 0xBE, 0x02]) # seleccionar area de impresion
                     # No existen líneas configuradas para qr
                     else:
                         tx += bytearray([0x1B, 0x57, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xBE, 0x02]) # seleccionar area de impresion
@@ -468,7 +495,8 @@ class Printer():
         tx += bytearray([0x1B, 0x32]) # espacio entre lineas
         tx += bytearray([0x1B, 0x21, 0x00]) # seleccionar modo de impresion
         tx += bytearray([0x1B, 0x44, 0x13, 0x00]) # tabulaciones horizontales
-        tx += bytearray([0x1D, 0x5C, 0x28, 0x00]) # posicion vertical relativa            
+        tx += bytearray([0x1D, 0x5C, 0x28, 0x00]) # posicion vertical relativa +40 dots: separa la linea 1 del borde inferior del area para que su mitad no se recorte
+        tx += bytearray([0x1B, 0x33, 0x48]) # interlineado entre linea 1 y 2 0x48=72 dots: supera los 48 del glifo doble para que la linea 2 no se encime con la linea 1
         tx += bytearray([0x1B, 0x21, 0x30]) # seleccionar modo de impresion
 
 
@@ -479,7 +507,7 @@ class Printer():
                 mientras = self.Letras(line1)
                 for k in range(len(mientras)):
                     tx.append(mientras[k])
-            tx += bytearray([0x0A]) # salto de linea 
+            tx += bytearray([0x0A]) # salto de linea ---para que salga el logo solo uno 
     
         #endregion linea 1
         #region linea 2
@@ -490,10 +518,12 @@ class Printer():
                 for k in range(len(mientras)):
                     tx.append(mientras[k])
         #endregion linea 2
-        tx += bytearray([0x0A])# salto de linea 
+      
         tx += bytearray([0x1B, 0x33, 0x28]) #selecionar espaciado 
         tx += bytearray([0x1B,0x21,0x01,0x09])# selecionar modo de impresion
-    
+
+        tx += bytearray([0x0A, 0x09])
+
         #region linea 3
         if (tamano > 2):
             if lineas[2] not in nempty:
@@ -506,6 +536,7 @@ class Printer():
 
         #endregion linea 3
         tx += bytearray([0x0A, 0x09]) # salto de linea
+        tx += bytearray([0x1D, 0x5C, 0x37, 0x00]) # posicion vertical relativa: 55 dots (eje invertido con ESC T 2, subir el valor sube la linea 7: 10px arriba de los 45 anteriores)
     
         #region linea 7
         if tamano > 6:
@@ -518,17 +549,18 @@ class Printer():
                 mientras = self.Letras(line7)
                 for k in range(len(mientras)):
                     tx.append(mientras[k])
-         #endregion linea 7 ---- linea icetex 
+        #endregion linea 7 ---- linea icetex 
         tx += bytearray([0x0A, 0x0A]) #salto de linea
         tx += bytearray([0x0A]) # salto de linea (SAT)
         tx += bytearray([0x0A]) # salto de linea (SAT)
-        tx += bytearray([0x0A]) # salto de linea (SAT)
         tx += bytearray([0x1B, 0x32]) # espacio entre lineas
-        tx += bytearray([0x1D, 0x5C, 0x14, 0x00]) # posicion vertical relativa
-        tx += bytearray([0x1D, 0x21, 0x43]) # Tamaño de letra 5*4
-        tx += bytearray([0x09])
+        tx += bytearray([0x1D, 0x5C, 0x38, 0x00]) # posicion vertical relativa 56 dots: sube el bloque turno + lineas 13,4,6,15 los 72 dots que se acorto el turno al des-estirarlo
+        tx += bytearray([0x1D, 0x21, 0x33]) # Tamaño de letra 4*4 (antes 4*7): mismo multiplicador ancho/alto para que no salga estirado verticalmente
+        tx += bytearray ([0x09])
+        
         
         #region turno
+        
         if tamano > 10:
             if lineas[10] not in nempty:
                 mostrar = bytearray(lineas[10].encode('utf-8'))
@@ -569,7 +601,7 @@ class Printer():
         #endregion hora
 
             #tx[i++] = 0x1B; tx[i++] = 0x33; tx[i++] = 0x5B;  # seleccionar espaciado 
-        tx += bytearray([0x0A, 0x0A]) # salto de linea
+        tx += bytearray([0x0A]) # salto de linea
         tx += bytearray([0x1B, 0x33, interlineado[0]]) # seleccionar espaciado
     
 
@@ -635,7 +667,7 @@ class Printer():
                 mientras = self.Letras(line6)
                 for k in range(len(mientras)):
                     tx.append(mientras[k])
-                tx += bytearray([0x0A]) # salto de linea
+              
                 
         #endregion linea 6
 
@@ -646,7 +678,7 @@ class Printer():
             if lineas[13] not in nempty:
                 tx += bytearray([0x1B, 0x33, 0x28]) # seleccionar espaciado
                 tx += bytearray([0x1B, 0x21, 0x01]) # seleccionar modo de impresion
-                tx += bytearray([0x09] )
+               
                 
 
                 line13 = bytearray(lineas[13].encode('utf-8'))
@@ -660,26 +692,22 @@ class Printer():
 
         if tamano > 14:
             if lineas[14] not in nempty:
-                tx += bytearray([0x0A]) # salto de line
+                tx += bytearray([0x0A]) # salto de linea
                 
 
                 tx += bytearray([0x1B, 0x21, 0x01, 0x09]) # seleccionar modo de impresion
+                tx += bytearray([0x1D, 0x28, 0x6B, 0x03, 0x00, 0x031, 0x43, 0x03])
+                tx += bytearray([0x1D, 0x28, 0x6B, 0x03, 0x00, 0x031, 0x45, 0x33])
+                tx += bytearray([0x1D, 0x28, 0x6B, len(lineas[14])+3, 0x00, 0x031, 0x50, 0x30])
+                
 
                 line14 = bytearray(lineas[14].encode('utf-8'))
-                qr_longitud = len(line14) + 3
-                qr_pL = qr_longitud & 0xFF
-                qr_pH = (qr_longitud >> 8) & 0xFF
-
-                tx += bytearray([0x1D, 0x28, 0x6B, 0x04, 0x00, 0x31, 0x41, 0x32, 0x00]) # seleccionar modelo qr (modelo 2, compatible con clones/SAT)
-                tx += bytearray([0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x43, 0x03]) # tamaño de modulo del qr
-                tx += bytearray([0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x45, 0x33]) # nivel de correccion de error del qr
-                tx += bytearray([0x1D, 0x28, 0x6B, qr_pL, qr_pH, 0x31, 0x50, 0x30]) # almacenar datos del qr
 
                 mientras = self.Letras(line14)
                 for k in range(len(mientras)):
                     tx.append(mientras[k])
 
-                tx += bytearray([0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x51, 0x30]) # imprimir qr almacenado
+                tx += bytearray([0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x51, 0x30, 0x00])
                 tx += bytearray([0x0A]) # salto de linea
                 
 
@@ -689,6 +717,9 @@ class Printer():
         tx += bytearray([0x1B, 0x54, 0x01]) # direccion de impresion de derecha a izquierda
         tx += bytearray([0x1B, 0x33, 0x18]) # seleccionar espaciado
         tx += bytearray([0x1B, 0x21, 0x00, 0x09]) # seleccionar modo de impresion 
+        tx += bytearray([0x1D, 0x5C, 0x14, 0x00]) # corrimiento horizontal del bloque lineas 8/9/10 (20px: se baja el valor para ALEJARLAS del turno y darles mas espacio)
+        tx += bytearray([0x1B, 0x5C, 0x30, 0x00]) # ESC \ +48 dots: con ESC T 1 este es el eje vertical fisico, baja las lineas 8/9/10 al nivel de la linea 7
+        
         #region linea 8
         if tamano > 7:
         
@@ -704,8 +735,9 @@ class Printer():
                     tx.append(mientras4[k])
 
         #endregion linea 8
+      
         tx += bytearray([0x0A, 0x09]) # salto de linea
-    
+        tx += bytearray([0x1B, 0x5C, 0x30, 0x00]) # ESC \ +48: reaplica el offset vertical a la linea 9 (el salto de linea lo reinicio)
 
         #region linea 9
         if tamano > 8:
@@ -719,8 +751,9 @@ class Printer():
                 for k in range(len(mientras5)):
                     tx.append(mientras5[k])
 
+
         #endregion linea 9
-        tx += bytearray([0x0A, 0x0A]) # salto de linea
+        tx += bytearray([0x0A, 0x09]) # salto de linea
     
         
         #region linea 10
@@ -736,10 +769,10 @@ class Printer():
                     tx.append( mientras6[k])
 
         #endregion linea10
-        tx += bytearray([0x0A])
-        tx += bytearray([0x1B, 0x64, 0x04]) # ESC d 4: avanza 4 lineas para que el papel pase el mecanismo de corte
-        tx += bytearray([0x1D, 0x56, 0x41, 0x00]) # GS V 65 0: corte parcial (comando de 3 bytes, mas compatible entre impresoras/clones que el de 2 bytes)
-
+        tx += bytearray([0x0C])
+        tx += bytearray([0x0A, 0x09]) # salto de linea
+        tx += bytearray([0x1D, 0x56, 0x01]) # cortar el papel
+    
         return tx
     
     def Logo(self, bitmap):
@@ -763,13 +796,13 @@ class Printer():
             raise ValueError(f"No se pudo leer el logo en '{bitmap}' (ruta invalida o formato no soportado)")
         height, width = img.shape[0:2]
         
-        if width > 110:
-            r = 110/width
-            img = cv2.resize(img,(110, int(height*r)), interpolation = cv2.INTER_AREA)
+        if width > 120:
+            r = 120/width
+            img = cv2.resize(img,(120, int(height*r)), interpolation = cv2.INTER_AREA)
             height, width = img.shape[0:2]
-        if height > 80:
-            r = 80/height
-            img = cv2.resize(img, (int(width*r), 80), interpolation = cv2.INTER_AREA)
+        if height > 90:
+            r = 90/height
+            img = cv2.resize(img, (int(width*r), 90), interpolation = cv2.INTER_AREA)
             height, width = img.shape[0:2]
         
         for row in range(height):
@@ -779,34 +812,29 @@ class Printer():
                     img[row,col,1] = 0
                     img[row,col,2] = 0
 
-        w_bytes = math.ceil(width / 8)  # bytes por fila (cada byte = 8 puntos horizontales)
+        array.append(0x1D) #GS
+        array.append(0x2A) #*
+        w = width / 8
+        h = height / 8 
+        array.append(math.ceil(w))
+        array.append(math.ceil(h))
+        pos = 0
+        posX = 0
+        posY = 0
+        pixels = 0
 
-        xL = w_bytes & 0xFF
-        xH = (w_bytes >> 8) & 0xFF
-        yL = height & 0xFF
-        yH = (height >> 8) & 0xFF
-
-        array.append(0x1D)  # GS
-        array.append(0x76)  # v
-        array.append(0x30)  # 0
-        array.append(0x33)  # m: tamaño cuádruple (igual escala visual que antes)
-        array.append(xL)
-        array.append(xH)
-        array.append(yL)
-        array.append(yH)
-
-        # Formato ráster: fila por fila (arriba a abajo), cada fila son
-        # exactamente w_bytes bytes (8 puntos horizontales por byte,
-        # MSB = punto mas a la izquierda).
-        for row in range(height):
-            for byte_col in range(w_bytes):
-                pixels = 0
-                for bit in range(8):
-                    col = byte_col * 8 + bit
-                    if col < width:
-                        f = img[row, col]
-                        if f[2] == 0:
-                            pixels |= (1 << (7 - bit))
-                array.append(pixels)
-
+        while pos <= (math.ceil(w)*math.ceil(w)*8):
+            for cont in range(7,-1, -1):
+                if posX > width -1: break
+                f = img[posY, posX]
+                if f[2] == 0:
+                    pixels += math.trunc(2**cont)
+                posY += 1
+                if (posY > height -1): break
+            array.append(pixels)
+            pos += 1
+            pixels = 0
+            if posY >= height:
+                posX +=1
+                posY = 0
         return array

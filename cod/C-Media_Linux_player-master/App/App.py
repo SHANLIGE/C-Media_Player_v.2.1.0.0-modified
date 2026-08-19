@@ -16,13 +16,8 @@ def debug_printers():
 argv = sys.argv
 debug = "--debug" in sys.argv
 
-#arquitectura aarch64 arm linaro
-import platform
-arch = platform.machine()
-is_arm = arch in ("aarch64", "arm64", "armv7l")
-
 if debug:
-    #desarrollo
+    # Clases internas - Modo debug (incluye ARM64 Linaro)
     import importlib.util
 
     def _import_local(module_name, rel_path):
@@ -45,17 +40,17 @@ if debug:
     Player = _player_mod.Player
 
 else:
-    #compilado
+    # Clases internas - Compilación
     from App.ConfigGUI.MainFrame import MainFrame as Configuration
     from App.Player import Player as Player
 
 
-#config logs
+# --- Directorio de configuración ---
 CONFIG_DIR = os.path.expanduser("~/.config/Ciel/C-Media_Player")
 LOG_DIR    = os.path.join(CONFIG_DIR, "logs")
 os.makedirs(LOG_DIR, exist_ok=True)   # Crea el directorio si no existe (necesario en Linaro fresh install)
 
-#creacion de logs
+# Creación del archivo de logs
 logging.basicConfig(
     filename=os.path.join(LOG_DIR, "log.log"),
     level=logging.DEBUG,
@@ -69,15 +64,17 @@ if is_arm:
 # Descomentarear la siguiente línea para activar depuración remota (chrome://inspect)
 # os.environ["QTWEBENGINE_REMOTE_DEBUGGING"] = "9222"
 
-#flags de Chromium compatibles con arm64
+# --- Flags de Chromium compatibles con ARM64 ---
 chromium_flags = "--disable-pinch"
 if is_arm:
-    #desabilidar aceleracion gpu y qtwebengine sandbox
+    # En ARM/Linaro es necesario deshabilitar la aceleración GPU y el sandbox
+    # para evitar crashes del proceso de render de QtWebEngine
     chromium_flags += " --disable-gpu --no-sandbox --disable-dev-shm-usage"
 
 os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = chromium_flags
 
-#compatibilidad
+# En ARM64 con algunos drivers Mesa/Linaro, forzar software rendering evita
+# pantallas negras o crashes al iniciar QtWebEngine
 if is_arm:
     os.environ.setdefault("QT_QUICK_BACKEND", "software")
     os.environ.setdefault("LIBGL_ALWAYS_SOFTWARE", "1")
@@ -98,10 +95,11 @@ splash = QSplashScreen(pixmap)
 splash.show()
 root.processEvents()
 
-# Iniciación
+# --- Iniciación ---
 if len(argv) == 1:
     try:
         player = Player(debug)
+
         splash.finish(player)
         player.show()
     except Exception as e:
@@ -123,3 +121,5 @@ root.lastWindowClosed.connect(root.quit)
 
 # Fin de la aplicación
 sys.exit(root.exec())
+
+

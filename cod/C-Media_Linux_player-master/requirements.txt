@@ -1,5 +1,5 @@
 certifi==2024.2.2
-cffi==1.16.0
+cffi
 charset-normalizer==3.3.2
 click==8.1.7
 cryptography==42.0.8
@@ -8,7 +8,7 @@ gTTS==2.5.1
 idna==3.7
 importlib_metadata==7.2.0
 iso8601==1.0.2
-netifaces==0.11.0
+netifaces2
 numpy==1.26.4
 opencv-python>=4.9.0
 packaging==24.1
@@ -17,7 +17,7 @@ pycparser==2.22
 pynput==1.7.6
 PyRect==0.2.0
 pyserial==3.5
-PySide6==6.11.0
+PySide6
 pyusb==1.2.1
 PyYAML
 requests==2.31.0
