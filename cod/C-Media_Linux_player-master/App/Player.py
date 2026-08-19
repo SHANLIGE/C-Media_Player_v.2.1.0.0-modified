@@ -370,3 +370,5 @@ class Player(QMainWindow):
 
             time.sleep(0.3)
         
+
+        
