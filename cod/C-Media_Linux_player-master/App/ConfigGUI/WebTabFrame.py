@@ -24,12 +24,14 @@ COLOR_TEXTO = "#313336"
 COLOR_TEXTO_SUAVE = "#5B6066"
 COLOR_BACKGROUND = "#F2F4F6"
 COLOR_SCROLLBAR_BG = "#D0D0D3"
+COLOR_ADVERTENCIA = "#C0392B"
 
 # Nombre del archivo del control web dentro del JSON de pantallas
 CONTROL_WEB = "Control.NavegadorWebChrome.dll"
 
-# Llave que se agrega a cada pantalla para recordar en que monitor va
-LLAVE_MONITOR = "MonitorAsignado"
+# Llaves que se agregan a cada pantalla para recordar su monitor
+LLAVE_MONITOR = "MonitorAsignado"        # indice (0 = automatico)
+LLAVE_MONITOR_NOMBRE = "MonitorNombre"   # nombre real: HDMI-1, VGA-1, DP-2...
 
 
 class WebTabFrame(QWidget):
@@ -42,7 +44,7 @@ class WebTabFrame(QWidget):
     def __init__(self):
         super().__init__()
         self.setEnabled(False)
-        self.pantallas_web = []   # [{"url": str, "monitor": int}, ...]
+        self.pantallas_web = []   # [{"url","monitor","monitor_nombre"}, ...]
         self.nav_bar = False
         self.filas_url = []       # [{"widget","check","entry","combo","indice"}, ...]
         self.get_settings()
@@ -66,7 +68,7 @@ class WebTabFrame(QWidget):
                 padding: 8px 10px;
             }}
             QComboBox {{
-                min-width: 165px;
+                min-width: 175px;
             }}
             QComboBox::drop-down {{
                 border: none;
@@ -108,6 +110,10 @@ class WebTabFrame(QWidget):
             }}
             QLabel#monitores {{
                 color: {COLOR_TEXTO_SUAVE};
+                font-weight: 600;
+            }}
+            QLabel#advertencia {{
+                color: {COLOR_ADVERTENCIA};
                 font-weight: 600;
             }}
             QLabel#indiceUrl {{
@@ -172,7 +178,7 @@ class WebTabFrame(QWidget):
         titulo_url.setObjectName("tituloSeccion")
         self.mainLayout.addWidget(titulo_url)
 
-
+        
         # Monitores detectados
         self.label_monitores = QLabel()
         self.label_monitores.setObjectName("monitores")
@@ -185,8 +191,15 @@ class WebTabFrame(QWidget):
         fila_monitores = QHBoxLayout()
         fila_monitores.setSpacing(10)
         fila_monitores.addWidget(self.label_monitores, 1)
-        fila_monitores.addWidget(self.refrescar_button)
+        fila_monitores.addWidget(self.refrescar_button, 0, Qt.AlignTop)
         self.mainLayout.addLayout(fila_monitores)
+
+        # Advertencia de monitores en espejo
+        self.label_advertencia = QLabel()
+        self.label_advertencia.setObjectName("advertencia")
+        self.label_advertencia.setWordWrap(True)
+        self.label_advertencia.hide()
+        self.mainLayout.addWidget(self.label_advertencia)
 
         # Contenedor donde se apilan las filas de URL
         self.urls_container = QWidget()
@@ -214,9 +227,11 @@ class WebTabFrame(QWidget):
         # Se crean las filas con las URLs existentes
         if self.pantallas_web:
             for datos in self.pantallas_web:
-                self._agregar_fila_url(datos["url"], datos["monitor"])
+                self._agregar_fila_url(datos["url"],
+                                       datos.get("monitor", 0),
+                                       datos.get("monitor_nombre", ""))
         else:
-            self._agregar_fila_url("", 0)
+            self._agregar_fila_url("", 0, "")
 
         self._actualizar_label_monitores()
 
@@ -359,25 +374,48 @@ class WebTabFrame(QWidget):
         nombre = monitor.name() or "Monitor"
         return f"{indice + 1} · {nombre} ({geo.width()}x{geo.height()})"
 
-    def _llenar_combo(self, combo, seleccion=0):
+    def _llenar_combo(self, combo, seleccion=0, nombre=""):
         """
-        Llena un combo con los monitores detectados
+        Llena un combo con los monitores detectados.
+        El dato de cada opcion es {"indice": int, "nombre": str}
         :param combo: QComboBox
-        :param seleccion: int. Monitor guardado (0 = automatico, 1 = primero...)
+        :param seleccion: int. Indice guardado (0 = automatico)
+        :param nombre: str. Nombre del monitor guardado
         """
         combo.blockSignals(True)
         combo.clear()
-        combo.addItem("Automático", 0)
+        combo.addItem("Automático", {"indice": 0, "nombre": ""})
 
         monitores = self._monitores()
         for indice, monitor in enumerate(monitores):
-            combo.addItem(self._nombre_monitor(indice, monitor), indice + 1)
+            combo.addItem(self._nombre_monitor(indice, monitor),
+                          {"indice": indice + 1, "nombre": monitor.name()})
 
-        # Si el monitor guardado ya no esta conectado, se conserva la opcion
-        if seleccion and seleccion > len(monitores):
-            combo.addItem(f"{seleccion} · (no conectado)", seleccion)
+        posicion = -1
 
-        posicion = combo.findData(seleccion)
+        # Seleccion por nombre: es lo estable entre reinicios
+        if nombre:
+            for i in range(combo.count()):
+                if combo.itemData(i).get("nombre") == nombre:
+                    posicion = i
+                    break
+            if posicion < 0:
+                # El monitor guardado no esta conectado: se conserva la opcion
+                combo.addItem(f"{nombre} (no conectado)",
+                              {"indice": seleccion, "nombre": nombre})
+                posicion = combo.count() - 1
+
+        # Compatibilidad con configuraciones que solo guardaron el indice
+        if posicion < 0 and seleccion:
+            for i in range(combo.count()):
+                if combo.itemData(i).get("indice") == seleccion:
+                    posicion = i
+                    break
+            if posicion < 0:
+                combo.addItem(f"{seleccion} · (no conectado)",
+                              {"indice": seleccion, "nombre": ""})
+                posicion = combo.count() - 1
+
         combo.setCurrentIndex(posicion if posicion >= 0 else 0)
         combo.blockSignals(False)
 
@@ -387,16 +425,32 @@ class WebTabFrame(QWidget):
         conservando la seleccion de cada fila
         """
         for fila in self.filas_url:
-            self._llenar_combo(fila["combo"], fila["combo"].currentData() or 0)
+            datos = fila["combo"].currentData() or {"indice": 0, "nombre": ""}
+            self._llenar_combo(fila["combo"], datos.get("indice", 0),
+                               datos.get("nombre", ""))
         self._actualizar_label_monitores()
+
+    def _detectar_espejo(self):
+        """
+        Detecta monitores que comparten la misma geometria (modo espejo)
+        :return: list[list[str]]. Grupos de monitores clonados
+        """
+        geometrias = {}
+        for monitor in self._monitores():
+            geo = monitor.geometry()
+            clave = (geo.x(), geo.y(), geo.width(), geo.height())
+            geometrias.setdefault(clave, []).append(monitor.name())
+        return [nombres for nombres in geometrias.values() if len(nombres) > 1]
 
     def _actualizar_label_monitores(self):
         """
-        Muestra cuantos monitores se detectaron y cuales son
+        Muestra cuantos monitores se detectaron, cuales son,
+        y advierte si estan en modo espejo
         """
         monitores = self._monitores()
         if not monitores:
             self.label_monitores.setText("No se detectaron monitores.")
+            self.label_advertencia.hide()
             return
 
         detalle = "   |   ".join(self._nombre_monitor(i, m) for i, m in enumerate(monitores))
@@ -404,14 +458,26 @@ class WebTabFrame(QWidget):
         plural = "pantalla detectada" if cantidad == 1 else "pantallas detectadas"
         self.label_monitores.setText(f"{cantidad} {plural}:   {detalle}")
 
+        espejo = self._detectar_espejo()
+        if espejo:
+            grupos = "; ".join(" = ".join(g) for g in espejo)
+            self.label_advertencia.setText(
+                f"Atención: {grupos} están en modo espejo (muestran la misma imagen). "
+                "Las ventanas quedarán encimadas en una sola pantalla. "
+                "Configure el modo extendido en el sistema para poder repartirlas.")
+            self.label_advertencia.show()
+        else:
+            self.label_advertencia.hide()
+
     # -----------------------------------------------------------------
     # Manejo de las filas de URL
     # -----------------------------------------------------------------
-    def _agregar_fila_url(self, url="", monitor=0):
+    def _agregar_fila_url(self, url="", monitor=0, monitor_nombre=""):
         """
         Crea una fila: check de seleccion + indice + URL + monitor asignado
         :param url: str. Valor inicial del campo
-        :param monitor: int. Monitor guardado (0 = automatico)
+        :param monitor: int. Indice guardado (0 = automatico)
+        :param monitor_nombre: str. Nombre del monitor guardado
         """
         fila = QWidget()
         layout = QHBoxLayout(fila)
@@ -432,7 +498,7 @@ class WebTabFrame(QWidget):
         combo.setMinimumHeight(38)
         combo.setCursor(Qt.PointingHandCursor)
         combo.setToolTip("Monitor donde se abrirá esta URL")
-        self._llenar_combo(combo, monitor)
+        self._llenar_combo(combo, monitor, monitor_nombre)
 
         layout.addWidget(check)
         layout.addWidget(indice)
@@ -456,7 +522,7 @@ class WebTabFrame(QWidget):
         """
         Agrega un nuevo campo de URL vacio al final de la lista
         """
-        fila = self._agregar_fila_url("", 0)
+        fila = self._agregar_fila_url("", 0, "")
         fila.findChild(QLineEdit).setFocus()
 
     def delete_urls(self):
@@ -501,8 +567,10 @@ class WebTabFrame(QWidget):
         for fila in self.filas_url:
             texto = fila["entry"].text().strip()
             if texto:
+                seleccion = fila["combo"].currentData() or {"indice": 0, "nombre": ""}
                 datos.append({"url": self._normalizar_url(texto),
-                              "monitor": fila["combo"].currentData() or 0})
+                              "monitor": seleccion.get("indice", 0),
+                              "monitor_nombre": seleccion.get("nombre", "")})
             else:
                 vacias += 1
 
@@ -575,7 +643,8 @@ class WebTabFrame(QWidget):
                     base = controller.get("ObjetoBase", {})
                     self.pantallas_web.append({
                         "url": base.get("UrlInicio", ""),
-                        "monitor": pantalla.get(LLAVE_MONITOR, 0)
+                        "monitor": pantalla.get(LLAVE_MONITOR, 0),
+                        "monitor_nombre": pantalla.get(LLAVE_MONITOR_NOMBRE, "")
                     })
                     self.nav_bar = base.get("MostrarBarraNavegacion", False)
 
@@ -623,6 +692,7 @@ class WebTabFrame(QWidget):
             base["UrlInicio"] = datos[k]["url"]
             base["MostrarBarraNavegacion"] = nav
             settings["Pantallas"][i][LLAVE_MONITOR] = datos[k]["monitor"]
+            settings["Pantallas"][i][LLAVE_MONITOR_NOMBRE] = datos[k]["monitor_nombre"]
 
         # 2. Eliminar los sobrantes (de atras hacia adelante para no correr indices)
         for i, j in reversed(ubicaciones[len(datos):]):
@@ -639,6 +709,7 @@ class WebTabFrame(QWidget):
             nuevo_control["ObjetoBase"]["MostrarBarraNavegacion"] = nav
             nueva_pantalla["Controles"] = [nuevo_control]
             nueva_pantalla[LLAVE_MONITOR] = extra["monitor"]
+            nueva_pantalla[LLAVE_MONITOR_NOMBRE] = extra["monitor_nombre"]
             settings["Pantallas"].append(nueva_pantalla)
 
         # 4. Renumerar pantallas: el Player espera ScreenNumber empezando en 1
@@ -660,17 +731,21 @@ class WebTabFrame(QWidget):
                                  "No se pudo guardar el archivo de pantallas.\n" + str(e))
             return
 
-        # 6. Aviso si se asignaron monitores que no estan conectados
-        conectados = len(self._monitores())
-        faltantes = sorted({d["monitor"] for d in datos if d["monitor"] > conectados})
+        # 6. Avisos sobre los monitores asignados
+        conectados = [m.name() for m in self._monitores()]
+        faltantes = sorted({d["monitor_nombre"] for d in datos
+                            if d["monitor_nombre"] and d["monitor_nombre"] not in conectados})
 
         mensaje = f"Configuración guardada. {len(datos)} ventana(s) web."
+
         if faltantes:
-            mensaje += ("\n\nAtención: el monitor "
-                        + ", ".join(str(m) for m in faltantes)
-                        + " no está conectado en este momento. "
-                          "Esas ventanas se abrirán en el monitor principal "
-                          "hasta que se conecte.")
+            mensaje += ("\n\nAtención: " + ", ".join(faltantes)
+                        + " no está conectado en este momento. Esas ventanas se "
+                          "abrirán en el monitor principal hasta que se conecte.")
+
+        if self._detectar_espejo():
+            mensaje += ("\n\nAtención: hay monitores en modo espejo. Las ventanas "
+                        "quedarán encimadas hasta que se configure el modo extendido.")
 
         logging.info(f"WebTab - guardado en {ruta} | ventanas: {len(datos)} | "
                      f"monitores conectados: {conectados}")

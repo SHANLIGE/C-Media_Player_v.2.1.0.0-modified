@@ -11,8 +11,12 @@ import threading
 import time
 
 
-# Llave que guarda el monitor asignado a cada pantalla (0 = automatico)
-LLAVE_MONITOR = "MonitorAsignado"
+# Llaves que guarda la configuracion para cada pantalla
+LLAVE_MONITOR = "MonitorAsignado"          # indice del monitor (0 = automatico)
+LLAVE_MONITOR_NOMBRE = "MonitorNombre"     # nombre real: HDMI-1, VGA-1, DP-2...
+
+# Llave opcional en config.json para forzar el modo kiosco estricto
+LLAVE_KIOSCO = "ModoKioscoEstricto"
 
 
 class ScreenWindow(QMainWindow):
@@ -29,7 +33,10 @@ class ScreenWindow(QMainWindow):
         self.setAttribute(Qt.WA_AcceptTouchEvents, True)
         self.setWindowIcon(icono)
         self.setWindowTitle(titulo)
-        self.setWindowFlags(flags)
+        # Qt.Window es obligatorio: sin el, una ventana de nivel superior
+        # con banderas propias queda como Qt.Widget y el gestor de ventanas
+        # la trata de forma inconsistente (decoracion y pantalla completa)
+        self.setWindowFlags(Qt.Window | flags)
         self.frame = frame
         self.setCentralWidget(frame)
 
@@ -39,8 +46,8 @@ class ScreenWindow(QMainWindow):
         """
         try:
             self.frame.closeEvent()
-        except Exception as e:
-            logging.error(str(e))
+        except Exception:
+            logging.exception("ScreenWindow - error al cerrar el frame")
         event.accept()
 
 
@@ -89,6 +96,11 @@ class Player(QMainWindow):
             file_name = self.sett["Ruta"]
         self.screen_config = self.get_screen_config(file_name)
 
+        self.pantalla_completa = self.sett.get("PantallaCompleta", False)
+        # Modo kiosco estricto: omite al gestor de ventanas por completo.
+        # Util cuando el gestor ignora las peticiones de pantalla completa.
+        self.kiosco = self.sett.get(LLAVE_KIOSCO, False)
+
         # Ventana siempre visible (Top Most)
         if self.sett["SiempreVisible"]:
             self.flags |= Qt.WindowStaysOnTopHint
@@ -97,7 +109,13 @@ class Player(QMainWindow):
         if not (self.sett["MostrarBordeVentana"]):
             self.flags |= Qt.FramelessWindowHint
 
-        self.setWindowFlags(self.flags)
+        # En kiosco estricto la ventana se dibuja sin decoracion y sin
+        # intervencion del gestor de ventanas
+        if self.kiosco:
+            self.flags |= Qt.FramelessWindowHint
+            self.flags |= Qt.X11BypassWindowManagerHint
+
+        self.setWindowFlags(Qt.Window | self.flags)
 
         self.estado_pantalla.connect(self._aplicar_estado_pantalla)
 
@@ -106,22 +124,24 @@ class Player(QMainWindow):
         # ------------------------------------------------------------------
         self.frames = {}
         self.titulos = {}
-        self.asignaciones = {}   # numero de pantalla -> monitor pedido (0 = auto)
+        self.asignaciones = {}   # numero -> {"indice": int, "nombre": str}
         self.ventanas = {}       # ventanas secundarias (pantalla 2 en adelante)
 
         for pantalla in self.screen_config["Pantallas"]:
             numero = pantalla.get("ScreenNumber", len(self.frames) + 1)
             self.frames[numero] = MainFrame(pantalla["Controles"])
             self.titulos[numero] = pantalla.get("TitleName", f"C-Media Player {numero}")
-            self.asignaciones[numero] = pantalla.get(LLAVE_MONITOR, 0)
+            self.asignaciones[numero] = {
+                "indice": pantalla.get(LLAVE_MONITOR, 0),
+                "nombre": pantalla.get(LLAVE_MONITOR_NOMBRE, "")
+            }
 
         numeros = sorted(self.frames)
 
         # La primera pantalla es esta misma ventana
-        principal = numeros[0]
-        self.setWindowTitle(self.titulos[principal])
-        self.setCentralWidget(self.frames[principal])
-        self.numero_principal = principal
+        self.numero_principal = numeros[0]
+        self.setWindowTitle(self.titulos[self.numero_principal])
+        self.setCentralWidget(self.frames[self.numero_principal])
 
         # El resto se abre en ventanas propias
         for numero in numeros[1:]:
@@ -129,23 +149,60 @@ class Player(QMainWindow):
                                                  self.titulos[numero],
                                                  self.flags, self.icono)
 
-        logging.info(f"Player - {len(numeros)} pantalla(s) configurada(s), "
-                     f"{len(self.app.screens())} monitor(es) detectado(s)")
+        self._registrar_monitores()
 
-        # Ubicacion inicial (aun sin mostrar)
-        self._aplicar_ubicaciones()
+        # Geometria inicial. No se crea la ventana nativa aqui: hacerlo antes
+        # de mostrar rompe la inicializacion de QtWebEngine en algunos drivers.
+        self._preasignar_geometria()
 
         # Reacomodo automatico cuando se conecta o desconecta un monitor
-        self.app.screenAdded.connect(self._monitores_cambiaron)
-        self.app.screenRemoved.connect(self._monitores_cambiaron)
+        try:
+            self.app.screenAdded.connect(self._monitores_cambiaron)
+            self.app.screenRemoved.connect(self._monitores_cambiaron)
+        except Exception:
+            logging.exception("Player - no se pudo conectar la detección de monitores")
 
         # Hilo de monitoreo (compatibilidad con el comportamiento anterior)
         self.thread = threading.Thread(target=self.print_screens, daemon=True)
         self.thread.start()
 
     # ------------------------------------------------------------------
-    # Reparto de ventanas entre monitores
+    # Deteccion de monitores
     # ------------------------------------------------------------------
+    def _registrar_monitores(self):
+        """
+        Deja en el log el estado real de los monitores y avisa si estan
+        en modo espejo, que es el caso en que el reparto no puede funcionar
+        """
+        try:
+            monitores = self.app.screens()
+        except Exception:
+            logging.exception("Player - no se pudieron leer los monitores")
+            return
+
+        logging.info(f"Player - monitores detectados: {len(monitores)}")
+
+        geometrias = {}
+        for indice, monitor in enumerate(monitores):
+            geo = monitor.geometry()
+            clave = (geo.x(), geo.y(), geo.width(), geo.height())
+            geometrias.setdefault(clave, []).append(monitor.name())
+            logging.info(f"Player - monitor [{indice + 1}] {monitor.name()} "
+                         f"{geo.width()}x{geo.height()} en ({geo.x()},{geo.y()})")
+
+        for nombres in geometrias.values():
+            if len(nombres) > 1:
+                logging.warning(
+                    "Player - monitores en ESPEJO con la misma geometria: "
+                    + " = ".join(nombres)
+                    + ". Las ventanas quedaran encimadas. Configure modo extendido "
+                      "con xrandr para poder repartirlas.")
+
+        if len(monitores) < len(self.frames):
+            logging.warning(
+                f"Player - hay {len(self.frames)} pantalla(s) configurada(s) "
+                f"pero solo {len(monitores)} monitor(es) disponible(s).")
+
     def _pares_ventanas(self):
         """
         Ventanas de la aplicacion en orden de pantalla
@@ -155,94 +212,284 @@ class Player(QMainWindow):
         pares += [(n, self.ventanas[n]) for n in sorted(self.ventanas)]
         return pares
 
+    def _buscar_monitor(self, asignacion):
+        """
+        Busca el monitor pedido por una pantalla.
+        Se prioriza el nombre (HDMI-1, VGA-1...) porque el indice cambia
+        segun el orden en que el sistema detecte las salidas de video.
+        :param asignacion: dic. {"indice": int, "nombre": str}
+        :return: QScreen | None
+        """
+        monitores = self.app.screens()
+
+        nombre = asignacion.get("nombre", "")
+        if nombre:
+            for monitor in monitores:
+                if monitor.name() == nombre:
+                    return monitor
+            logging.warning(f"Player - el monitor '{nombre}' no está conectado")
+
+        indice = asignacion.get("indice", 0)
+        if indice and indice <= len(monitores):
+            return monitores[indice - 1]
+        if indice:
+            logging.warning(f"Player - el monitor {indice} no está conectado")
+
+        return None
+
     def _calcular_monitores(self):
         """
         Decide en que monitor va cada pantalla.
-        Primero respeta las asignaciones explicitas; las que estan en automatico
-        se reparten en los monitores que queden libres.
+        Primero respeta las asignaciones explicitas; las que estan en
+        automatico se reparten en los monitores que queden libres.
         :return: dict. numero de pantalla -> QScreen
         """
         monitores = self.app.screens()
-        principal = self.app.primaryScreen()
+        if not monitores:
+            return {}
+
+        principal = self.app.primaryScreen() or monitores[0]
         resultado = {}
         usados = set()
 
         # 1. Asignaciones explicitas y validas
         for numero, _ in self._pares_ventanas():
-            pedido = self.asignaciones.get(numero, 0)
-            if pedido and pedido <= len(monitores):
-                resultado[numero] = monitores[pedido - 1]
-                usados.add(pedido - 1)
-            elif pedido:
-                logging.warning(f"Player - pantalla {numero}: el monitor {pedido} "
-                                "no está conectado")
+            asignacion = self.asignaciones.get(numero, {})
+            if not asignacion.get("nombre") and not asignacion.get("indice"):
+                continue
+            monitor = self._buscar_monitor(asignacion)
+            if monitor is not None:
+                resultado[numero] = monitor
+                usados.add(monitor.name())
 
         # 2. El resto toma los monitores libres, en orden
-        libres = [i for i in range(len(monitores)) if i not in usados]
+        libres = [m for m in monitores if m.name() not in usados]
         for numero, _ in self._pares_ventanas():
             if numero in resultado:
                 continue
-            if libres:
-                indice = libres.pop(0)
-                resultado[numero] = monitores[indice]
-            else:
-                resultado[numero] = principal
+            resultado[numero] = libres.pop(0) if libres else principal
 
         return resultado
 
-    def _aplicar_ubicaciones(self):
+    # ------------------------------------------------------------------
+    # Ubicacion de las ventanas
+    # ------------------------------------------------------------------
+    def _preasignar_geometria(self):
         """
-        Mueve cada ventana a su monitor. En pantalla completa la deja
-        ocupando todo ese monitor; si no, usa el tamaño de config.json.
+        Fija la geometria de cada ventana antes de mostrarla.
+        En un escritorio extendido todos los monitores comparten un mismo
+        sistema de coordenadas, asi que la geometria basta para que el
+        gestor de ventanas mapee cada ventana en el monitor correcto.
         """
-        asignados = self._calcular_monitores()
-        completa = self.sett["PantallaCompleta"]
+        try:
+            asignados = self._calcular_monitores()
+            for numero, ventana in self._pares_ventanas():
+                monitor = asignados.get(numero)
+                if monitor is not None:
+                    ventana.setGeometry(self._geometria(monitor, numero, asignados))
+        except Exception:
+            # Una falla ubicando ventanas nunca debe impedir que el player abra
+            logging.exception("Player - error al preasignar la geometría")
 
+    def _geometria(self, monitor, numero, asignados):
+        """
+        Calcula la geometria de una ventana en su monitor
+        :param monitor: QScreen. Monitor destino
+        :param numero: int. Numero de pantalla
+        :param asignados: dict. Reparto completo, para detectar ventanas encimadas
+        :return: QRect
+        """
+        area = monitor.geometry()
+
+        if self.pantalla_completa or self.kiosco:
+            return area
+
+        # Ventana normal: tamaño de config.json dentro del monitor destino
         ancho = self.sett["AnchoRequerido"]
         alto = self.sett["AltoRequerido"]
         izquierda = self.sett["LeftRequerido"]
         arriba = self.sett["TopRequerido"]
 
-        ocupacion = {}   # cuantas ventanas van ya en cada monitor
+        # Si varias ventanas caen en el mismo monitor se escalonan
+        previas = [n for n, m in asignados.items()
+                   if m.name() == monitor.name() and n < numero]
+        desplazamiento = 40 * len(previas)
+
+        return QRect(area.x() + izquierda + desplazamiento,
+                     area.y() + arriba + desplazamiento,
+                     ancho, alto)
+
+    def _show_nativo(self, ventana):
+        """
+        Muestra una ventana usando el show() de QMainWindow.
+
+        IMPORTANTE: esta clase sobrescribe show(). Si aqui se llamara
+        ventana.show() y la ventana fuera la principal (self), se volveria
+        a entrar en Player.show() de forma indefinida (RecursionError).
+        :param ventana: QMainWindow
+        """
+        QMainWindow.show(ventana)
+
+    def _mostrar_ventana(self, ventana, monitor, geometria):
+        """
+        Muestra una ventana en su monitor con el estado correcto.
+        :param ventana: QMainWindow
+        :param monitor: QScreen. Monitor destino
+        :param geometria: QRect. Geometria calculada
+        """
+        if self.kiosco:
+            # Sin gestor de ventanas: la geometria manda y no hay decoracion
+            ventana.setGeometry(geometria)
+            self._show_nativo(ventana)
+            ventana.raise_()
+            return
+
+        # La geometria se fija ANTES de mostrar, para que el gestor sepa
+        # en que monitor debe mapear (y luego expandir) la ventana
+        ventana.setGeometry(geometria)
+        self._show_nativo(ventana)
+
+        if self.pantalla_completa:
+            # Segunda pasada: algunos gestores ignoran el estado de pantalla
+            # completa si se pide en el mismo ciclo del mapeo de la ventana
+            QTimer.singleShot(150, lambda v=ventana, m=monitor, g=geometria:
+                              self._forzar_pantalla_completa(v, m, g))
+
+    def _forzar_pantalla_completa(self, ventana, monitor, geometria):
+        """
+        Reaplica la pantalla completa una vez la ventana ya esta mapeada.
+        Aqui la ventana nativa ya existe, asi que setScreen() es seguro.
+        :param ventana: QMainWindow
+        :param monitor: QScreen. Monitor destino
+        :param geometria: QRect. Area del monitor
+        """
+        if self.cerrando or not ventana.isVisible():
+            return
+
+        try:
+            handle = ventana.windowHandle()
+            if handle is not None and handle.screen() != monitor:
+                handle.setScreen(monitor)
+
+            ventana.setGeometry(geometria)
+            ventana.showFullScreen()
+            ventana.raise_()
+
+            # Verificacion: si el gestor no respeto la peticion queda en el log
+            QTimer.singleShot(400, lambda v=ventana, m=monitor: self._verificar(v, m))
+        except Exception:
+            logging.exception("Player - error al aplicar pantalla completa")
+
+    def _verificar(self, ventana, monitor):
+        """
+        Comprueba que la ventana quedo en pantalla completa y en su monitor
+        :param ventana: QMainWindow
+        :param monitor: QScreen. Monitor esperado
+        """
+        if self.cerrando or not ventana.isVisible():
+            return
+
+        handle = ventana.windowHandle()
+        real = handle.screen().name() if handle and handle.screen() else "?"
+        titulo = ventana.windowTitle()
+
+        if not ventana.isFullScreen():
+            logging.warning(f"Player - '{titulo}' NO quedó en pantalla completa. "
+                            "Active ModoKioscoEstricto en config.json.")
+        if real != monitor.name():
+            logging.warning(f"Player - '{titulo}' quedó en el monitor {real} "
+                            f"y no en {monitor.name()}. Revise si los monitores "
+                            "están en modo espejo.")
+
+    def _aplicar_ubicaciones(self):
+        """
+        Reubica ventanas ya visibles, por ejemplo tras conectar un monitor.
+        Se sale de pantalla completa primero: un gestor de ventanas no mueve
+        de monitor una ventana que ya esta expandida.
+        """
+        try:
+            asignados = self._calcular_monitores()
+        except Exception:
+            logging.exception("Player - error al calcular monitores")
+            return
 
         for numero, ventana in self._pares_ventanas():
             monitor = asignados.get(numero)
             if monitor is None:
                 continue
 
-            area = monitor.geometry()
-            repetidas = ocupacion.get(monitor.name(), 0)
-            ocupacion[monitor.name()] = repetidas + 1
+            try:
+                geometria = self._geometria(monitor, numero, asignados)
 
-            # Se fija el monitor destino de la ventana nativa
-            handle = ventana.windowHandle()
-            if handle is not None:
-                handle.setScreen(monitor)
+                if self.kiosco:
+                    ventana.setGeometry(geometria)
+                    ventana.raise_()
+                elif self.pantalla_completa:
+                    ventana.showNormal()
+                    ventana.setGeometry(geometria)
+                    QTimer.singleShot(150, lambda v=ventana, m=monitor, g=geometria:
+                                      self._forzar_pantalla_completa(v, m, g))
+                else:
+                    ventana.setGeometry(geometria)
 
-            if completa:
-                ventana.setGeometry(area)
-                if ventana.isVisible():
+                logging.info(f"Player - pantalla {numero} -> monitor {monitor.name()}")
+            except Exception:
+                logging.exception(f"Player - error al reubicar la pantalla {numero}")
+
+    def show(self):
+        """
+        Muestra la ventana principal y todas las ventanas secundarias,
+        cada una en el monitor que le corresponde.
+        Si la ubicacion falla, las ventanas se muestran igual.
+        """
+        try:
+            asignados = self._calcular_monitores()
+        except Exception:
+            logging.exception("Player - error al calcular monitores")
+            asignados = {}
+
+        for numero, ventana in self._pares_ventanas():
+            monitor = asignados.get(numero)
+
+            if monitor is None:
+                self._show_nativo(ventana)
+                if self.pantalla_completa and not self.kiosco:
                     ventana.showFullScreen()
-            else:
-                desplazamiento = 40 * repetidas
-                ventana.setGeometry(area.x() + izquierda + desplazamiento,
-                                    area.y() + arriba + desplazamiento,
-                                    ancho, alto)
+                continue
 
-            logging.info(f"Player - pantalla {numero} -> monitor {monitor.name()} "
-                         f"{area.width()}x{area.height()} en ({area.x()},{area.y()})")
+            try:
+                geometria = self._geometria(monitor, numero, asignados)
+                self._mostrar_ventana(ventana, monitor, geometria)
+                logging.info(f"Player - pantalla {numero} "
+                             f"'{self.titulos.get(numero)}' -> monitor {monitor.name()} "
+                             f"{geometria.width()}x{geometria.height()} "
+                             f"en ({geometria.x()},{geometria.y()})")
+            except Exception:
+                logging.exception(f"Player - error al mostrar la pantalla {numero}")
+                # Ultimo recurso: mostrar sin ubicar
+                try:
+                    self._show_nativo(ventana)
+                except Exception:
+                    logging.exception(f"Player - no se pudo mostrar la pantalla {numero}")
+
+    def ventanas_todas(self):
+        """
+        Devuelve la ventana principal junto con las secundarias
+        :return: list[QMainWindow]
+        """
+        return [ventana for _, ventana in self._pares_ventanas()]
 
     @Slot()
     def _monitores_cambiaron(self, *args):
         """
         Se llama cuando el sistema agrega o quita un monitor.
-        Espera un momento a que el escritorio termine de reorganizarse
-        y vuelve a repartir las ventanas.
+        Espera a que el escritorio termine de reorganizarse y reparte de nuevo.
         """
         if self.cerrando:
             return
         logging.info(f"Player - cambio de monitores: {len(self.app.screens())} conectado(s)")
-        QTimer.singleShot(1200, self._reubicar)
+        self._registrar_monitores()
+        QTimer.singleShot(1500, self._reubicar)
 
     @Slot()
     def _reubicar(self):
@@ -252,24 +499,6 @@ class Player(QMainWindow):
         if self.cerrando:
             return
         self._aplicar_ubicaciones()
-
-    def show(self):
-        """
-        Muestra la ventana principal y todas las ventanas secundarias
-        """
-        super().show()
-        for numero in sorted(self.ventanas):
-            self.ventanas[numero].show()
-
-        # Con las ventanas ya creadas se puede fijar el monitor nativo
-        self._aplicar_ubicaciones()
-
-    def ventanas_todas(self):
-        """
-        Devuelve la ventana principal junto con las secundarias
-        :return: list[QMainWindow]
-        """
-        return [ventana for _, ventana in self._pares_ventanas()]
 
     @Slot(bool)
     def _aplicar_estado_pantalla(self, completa):
@@ -293,11 +522,14 @@ class Player(QMainWindow):
         """
         self.cerrando = True
         for numero in sorted(self.ventanas, reverse=True):
-            self.ventanas[numero].close()
+            try:
+                self.ventanas[numero].close()
+            except Exception:
+                logging.exception(f"Player - error al cerrar la pantalla {numero}")
         try:
             self.centralWidget().closeEvent()
-        except Exception as e:
-            logging.error(str(e))
+        except Exception:
+            logging.exception("Player - error al cerrar el frame principal")
         event.accept()
 
     def get_screen_config(self, ruta):
@@ -310,8 +542,8 @@ class Player(QMainWindow):
             with open(ruta, 'r', encoding="utf-8-sig") as file:
                 screen_config = json.load(file)
             return screen_config
-        except Exception as e:
-            logging.error(str(e))
+        except Exception:
+            logging.exception(f"Player - no se pudo leer el archivo de pantallas: {ruta}")
             QMessageBox.warning(self, "Advertencia",
                                 "Ha ocurrido un problema con el archivo de las pantallas, "
                                 "seleccione uno válido desde la aplicación de configuración.")
@@ -327,23 +559,23 @@ class Player(QMainWindow):
             with open(path, "r") as file:
                 sett = json.load(file)
             return sett
-        except Exception as e:
-            logging.error(str(e))
+        except Exception:
+            logging.exception(f"Player - no se pudo leer la configuración: {path}")
             QMessageBox.warning(self, "Advertencia",
                                 "Uno de los archivos de la aplicacción no fue instalado correctamente. "
                                 "Por favor reinstale la aplicación")
             sys.exit()
 
     def focus_changed(self):
-        if self.sett["PantallaCompleta"]:
+        if self.pantalla_completa and not self.kiosco:
             if self.isActiveWindow():
                 self.showFullScreen()
         if self.sett["SiempreVisible"]:
             for numero in sorted(self.frames):
                 try:
                     self.frames[numero].focus_changed()
-                except Exception as e:
-                    logging.error(str(e))
+                except Exception:
+                    logging.exception(f"Player - focus_changed en la pantalla {numero}")
             qApp.setActiveWindow(self)
 
     def print_screens(self):
@@ -364,11 +596,10 @@ class Player(QMainWindow):
 
             elif self.screen_disconnected and nombre != ":0.0":
                 time.sleep(0.5)
-                if self.sett["PantallaCompleta"]:
+                if self.pantalla_completa:
                     self.estado_pantalla.emit(True)
                 self.screen_disconnected = False
 
             time.sleep(0.3)
-        
 
         
