@@ -178,7 +178,14 @@ class WebTabFrame(QWidget):
         titulo_url.setObjectName("tituloSeccion")
         self.mainLayout.addWidget(titulo_url)
 
-        
+        ayuda_url = QLabel(
+            "La primera URL deberá ser del selector que maneja la impresora y el lector."
+
+        )
+        ayuda_url.setObjectName("ayuda")
+        ayuda_url.setWordWrap(True)
+        self.mainLayout.addWidget(ayuda_url)
+
         # Monitores detectados
         self.label_monitores = QLabel()
         self.label_monitores.setObjectName("monitores")

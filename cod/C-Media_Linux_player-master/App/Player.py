@@ -130,7 +130,14 @@ class Player(QMainWindow):
         for pantalla in self.screen_config["Pantallas"]:
             numero = pantalla.get("ScreenNumber", len(self.frames) + 1)
             self.frames[numero] = MainFrame(pantalla["Controles"])
-            self.titulos[numero] = pantalla.get("TitleName", f"C-Media Player {numero}")
+
+            # Los titulos deben ser unicos: si varias pantallas comparten el
+            # mismo TitleName no hay forma de distinguirlas en el log
+            titulo = pantalla.get("TitleName") or "C-Media Player"
+            if titulo in self.titulos.values():
+                titulo = f"{titulo} [{numero}]"
+            self.titulos[numero] = titulo
+
             self.asignaciones[numero] = {
                 "indice": pantalla.get(LLAVE_MONITOR, 0),
                 "nombre": pantalla.get(LLAVE_MONITOR_NOMBRE, "")
@@ -355,51 +362,104 @@ class Player(QMainWindow):
             QTimer.singleShot(150, lambda v=ventana, m=monitor, g=geometria:
                               self._forzar_pantalla_completa(v, m, g))
 
-    def _forzar_pantalla_completa(self, ventana, monitor, geometria):
+    def _forzar_pantalla_completa(self, ventana, monitor, geometria, intento=1):
         """
         Reaplica la pantalla completa una vez la ventana ya esta mapeada.
-        Aqui la ventana nativa ya existe, asi que setScreen() es seguro.
+
+        NO se usa setScreen() aqui: en X11, cambiar la pantalla de una ventana
+        que ya esta visible puede hacer que Qt la destruya y la vuelva a crear,
+        y el gestor la reubica en el monitor principal. Como en un escritorio
+        extendido todos los monitores comparten un mismo sistema de coordenadas,
+        basta con mover la ventana a las coordenadas del monitor destino.
+
         :param ventana: QMainWindow
         :param monitor: QScreen. Monitor destino
         :param geometria: QRect. Area del monitor
+        :param intento: int. Numero de intento actual
         """
         if self.cerrando or not ventana.isVisible():
             return
 
         try:
-            handle = ventana.windowHandle()
-            if handle is not None and handle.screen() != monitor:
-                handle.setScreen(monitor)
+            # Para moverla de monitor primero hay que sacarla de pantalla
+            # completa: un gestor no reubica una ventana ya expandida
+            if ventana.isFullScreen():
+                ventana.showNormal()
 
-            ventana.setGeometry(geometria)
+            # move() se respeta mejor que setGeometry() para la posicion
+            ventana.move(geometria.topLeft())
+            ventana.resize(geometria.width(), geometria.height())
             ventana.showFullScreen()
             ventana.raise_()
 
-            # Verificacion: si el gestor no respeto la peticion queda en el log
-            QTimer.singleShot(400, lambda v=ventana, m=monitor: self._verificar(v, m))
+            QTimer.singleShot(500, lambda v=ventana, m=monitor, g=geometria, i=intento:
+                              self._verificar(v, m, g, i))
         except Exception:
             logging.exception("Player - error al aplicar pantalla completa")
 
-    def _verificar(self, ventana, monitor):
+    def _monitor_real(self, ventana):
         """
-        Comprueba que la ventana quedo en pantalla completa y en su monitor
+        Determina en que monitor esta realmente una ventana, usando el centro
+        de su geometria. Es mas fiable que windowHandle().screen(), que a veces
+        queda desactualizado tras un movimiento hecho por el gestor de ventanas.
+        :param ventana: QMainWindow
+        :return: QScreen | None
+        """
+        centro = ventana.frameGeometry().center()
+        for pantalla in self.app.screens():
+            if pantalla.geometry().contains(centro):
+                return pantalla
+
+        handle = ventana.windowHandle()
+        return handle.screen() if handle is not None else None
+
+    def _verificar(self, ventana, monitor, geometria, intento=1):
+        """
+        Comprueba que la ventana quedo en pantalla completa y en su monitor.
+        Si el gestor de ventanas la movio, se reintenta hasta MAX_INTENTOS.
         :param ventana: QMainWindow
         :param monitor: QScreen. Monitor esperado
+        :param geometria: QRect. Area del monitor
+        :param intento: int. Numero de intento actual
         """
         if self.cerrando or not ventana.isVisible():
             return
 
-        handle = ventana.windowHandle()
-        real = handle.screen().name() if handle and handle.screen() else "?"
+        MAX_INTENTOS = 4
+
+        real = self._monitor_real(ventana)
+        nombre_real = real.name() if real is not None else "?"
         titulo = ventana.windowTitle()
 
-        if not ventana.isFullScreen():
-            logging.warning(f"Player - '{titulo}' NO quedó en pantalla completa. "
+        bien_ubicada = (nombre_real == monitor.name())
+        bien_expandida = ventana.isFullScreen()
+
+        if bien_ubicada and bien_expandida:
+            if intento > 1:
+                logging.info(f"Player - '{titulo}' quedó correctamente en "
+                             f"{monitor.name()} tras {intento} intentos")
+            return
+
+        if intento < MAX_INTENTOS:
+            logging.info(f"Player - '{titulo}' quedó en {nombre_real} "
+                         f"(esperado {monitor.name()}, pantalla completa: "
+                         f"{bien_expandida}). Reintento {intento + 1}...")
+            # Cada reintento espera un poco mas: el gestor puede seguir
+            # reacomodando ventanas durante el arranque
+            QTimer.singleShot(300 * intento,
+                              lambda v=ventana, m=monitor, g=geometria, i=intento + 1:
+                              self._forzar_pantalla_completa(v, m, g, i))
+            return
+
+        # Se agotaron los reintentos: el gestor de ventanas no coopera
+        if not bien_ubicada:
+            logging.warning(f"Player - '{titulo}' quedó en el monitor {nombre_real} "
+                            f"y no en {monitor.name()} tras {MAX_INTENTOS} intentos. "
                             "Active ModoKioscoEstricto en config.json.")
-        if real != monitor.name():
-            logging.warning(f"Player - '{titulo}' quedó en el monitor {real} "
-                            f"y no en {monitor.name()}. Revise si los monitores "
-                            "están en modo espejo.")
+        if not bien_expandida:
+            logging.warning(f"Player - '{titulo}' NO quedó en pantalla completa "
+                            f"tras {MAX_INTENTOS} intentos. "
+                            "Active ModoKioscoEstricto en config.json.")
 
     def _aplicar_ubicaciones(self):
         """
@@ -601,5 +661,4 @@ class Player(QMainWindow):
                 self.screen_disconnected = False
 
             time.sleep(0.3)
-
         
