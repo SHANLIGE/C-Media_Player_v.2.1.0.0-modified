@@ -9,14 +9,17 @@ import logging
 import json
 import threading
 import time
+import subprocess
+import re
 
 
 # Llaves que guarda la configuracion para cada pantalla
 LLAVE_MONITOR = "MonitorAsignado"          # indice del monitor (0 = automatico)
 LLAVE_MONITOR_NOMBRE = "MonitorNombre"     # nombre real: HDMI-1, VGA-1, DP-2...
 
-# Llave opcional en config.json para forzar el modo kiosco estricto
-LLAVE_KIOSCO = "ModoKioscoEstricto"
+# Llaves opcionales en config.json
+LLAVE_KIOSCO = "ModoKioscoEstricto"        # omite al gestor de ventanas
+LLAVE_TACTIL = "MapeoTactil"               # "auto" o {"dispositivo": "monitor"}
 
 
 class ScreenWindow(QMainWindow):
@@ -98,7 +101,9 @@ class Player(QMainWindow):
 
         self.pantalla_completa = self.sett.get("PantallaCompleta", False)
         # Modo kiosco estricto: omite al gestor de ventanas por completo.
-        # Util cuando el gestor ignora las peticiones de pantalla completa.
+        # al saltarse el gestor, la ventana no recibe el foco de
+        # entrada de la forma habitual y el tactil o el teclado pueden dejar
+        # de responder. Actívelo solo si el gestor ignora la pantalla completa.
         self.kiosco = self.sett.get(LLAVE_KIOSCO, False)
 
         # Ventana siempre visible (Top Most)
@@ -109,8 +114,6 @@ class Player(QMainWindow):
         if not (self.sett["MostrarBordeVentana"]):
             self.flags |= Qt.FramelessWindowHint
 
-        # En kiosco estricto la ventana se dibuja sin decoracion y sin
-        # intervencion del gestor de ventanas
         if self.kiosco:
             self.flags |= Qt.FramelessWindowHint
             self.flags |= Qt.X11BypassWindowManagerHint
@@ -532,6 +535,9 @@ class Player(QMainWindow):
                 except Exception:
                     logging.exception(f"Player - no se pudo mostrar la pantalla {numero}")
 
+        # El tactil se mapea cuando las ventanas ya estan en su sitio
+        QTimer.singleShot(2000, self._mapear_tactil)
+
     def ventanas_todas(self):
         """
         Devuelve la ventana principal junto con las secundarias
@@ -559,6 +565,9 @@ class Player(QMainWindow):
         if self.cerrando:
             return
         self._aplicar_ubicaciones()
+        # Al cambiar el tamaño del escritorio virtual el tactil se
+        # descalibra, asi que hay que volver a mapearlo
+        QTimer.singleShot(2000, self._mapear_tactil)
 
     @Slot(bool)
     def _aplicar_estado_pantalla(self, completa):
@@ -572,6 +581,101 @@ class Player(QMainWindow):
         else:
             for ventana in self.ventanas_todas():
                 ventana.showNormal()
+
+    # ------------------------------------------------------------------
+    # Mapeo de pantallas tactiles
+    # ------------------------------------------------------------------
+    def _dispositivos_tactiles(self):
+        """
+        Busca dispositivos de entrada que parezcan pantallas tactiles
+        :return: list[dict]. [{"id": str, "nombre": str}, ...]
+        """
+        try:
+            salida = subprocess.run(["xinput", "list"], capture_output=True,
+                                    text=True, timeout=10).stdout
+        except Exception:
+            logging.exception("Player - no se pudo ejecutar xinput")
+            return []
+
+        dispositivos = []
+        for linea in salida.splitlines():
+            if "slave" not in linea or "pointer" not in linea:
+                continue
+
+            coincidencia = re.search(r"↳\s+(.+?)\s+id=(\d+)", linea)
+            if not coincidencia:
+                continue
+
+            nombre = coincidencia.group(1).strip()
+            clave = nombre.lower()
+            if any(t in clave for t in ["touch", "tactil", "elan", "egalax",
+                                        "ilitek", "goodix", "silead",
+                                        "digitizer"]):
+                dispositivos.append({"id": coincidencia.group(2),
+                                     "nombre": nombre})
+
+        return dispositivos
+
+    def _mapear_tactil(self):
+        """
+        Mapea las pantallas tactiles a su monitor.
+
+        En X11 un panel tactil reparte sus coordenadas sobre todo el
+        escritorio virtual. Con un solo monitor la relacion es 1 a 1, pero
+        al conectar un segundo monitor el escritorio se ensancha y el tactil
+        queda descalibrado: el toque aterriza en el monitor equivocado o
+        parece no responder. xinput map-to-output limita el dispositivo a
+        un solo monitor y restaura la correspondencia.
+        """
+        if self.cerrando:
+            return
+
+        config = self.sett.get(LLAVE_TACTIL)
+        if not config:
+            return   # sin configuracion no se toca nada
+
+        dispositivos = self._dispositivos_tactiles()
+        if not dispositivos:
+            logging.info("Player - no se detectaron dispositivos táctiles")
+            return
+
+        # Modo automatico: todo el tactil va al monitor de la pantalla 1
+        if isinstance(config, str) and config.lower() == "auto":
+            asignados = self._calcular_monitores()
+            monitor = asignados.get(self.numero_principal)
+            if monitor is None:
+                return
+            destino = {d["nombre"]: monitor.name() for d in dispositivos}
+        elif isinstance(config, dict):
+            destino = config
+        else:
+            logging.warning(f"Player - valor inválido en {LLAVE_TACTIL}: {config}")
+            return
+
+        conectados = [m.name() for m in self.app.screens()]
+
+        for dispositivo in dispositivos:
+            monitor = destino.get(dispositivo["nombre"])
+            if not monitor:
+                continue
+            if monitor not in conectados:
+                logging.warning(f"Player - táctil '{dispositivo['nombre']}': el "
+                                f"monitor {monitor} no está conectado")
+                continue
+
+            try:
+                resultado = subprocess.run(
+                    ["xinput", "map-to-output", dispositivo["id"], monitor],
+                    capture_output=True, text=True, timeout=10)
+                if resultado.returncode == 0:
+                    logging.info(f"Player - táctil '{dispositivo['nombre']}' "
+                                 f"mapeado a {monitor}")
+                else:
+                    logging.warning(f"Player - no se pudo mapear el táctil "
+                                    f"'{dispositivo['nombre']}': "
+                                    f"{resultado.stderr.strip()}")
+            except Exception:
+                logging.exception("Player - error al mapear el táctil")
 
     # ------------------------------------------------------------------
     # Ciclo de vida
