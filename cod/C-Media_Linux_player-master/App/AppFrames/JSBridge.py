@@ -213,17 +213,39 @@ class JSBridge(QtCore.QObject):
         window.speechSynthesis = window.api.speech;
         window.api._bridge._init();
 
-     	var queue = [];        
+        // ------------------------------------------------------------------
+        // Cola de sintesis de voz
+        // ------------------------------------------------------------------
+        // ANTES: la cola era "var queue = []", una variable de closure.
+        // Python intentaba vaciarla con awake_js("window.queue = []"), lo
+        // que solo creaba una global NUEVA y no tocaba la del closure. La
+        // cola nunca se vaciaba, asi que cada speak() enviaba el arreglo
+        // completo: la segunda locucion mandaba dos elementos, la tercera
+        // tres, y se repetian locuciones ya dichas.
+        //
+        // AHORA: la cola vive en window.__cielSpeechQueue, que Python si
+        // puede alcanzar. Se vacia con length = 0 para conservar el mismo
+        // objeto; si se reasignara con = [] se crearia otro arreglo y
+        // Python seguiria limpiando el anterior.
+        window.__cielSpeechQueue = window.__cielSpeechQueue || [];
+
         window.speechSynthesis.speak = function(speech){
-        	queue.push(speech);
-  	        window.speak_func(queue)
+            // Solo se envia el texto: el objeto SpeechSynthesisUtterance
+            // completo no viaja bien por el WebChannel.
+            window.__cielSpeechQueue.push({
+                text: (speech && speech.text) ? String(speech.text) : String(speech || "")
+            });
+            if (window.speak_func) {
+                window.speak_func(window.__cielSpeechQueue);
+            } else {
+                console.warn("VOZ: window.speak_func no esta disponible todavia");
+            }
         };
-        
-                
+
         window.speechSynthesis.cancel = function(){
-        	queue = [];
-        	window.api.speech.cancel_speech();
-        }
+            window.__cielSpeechQueue.length = 0;
+            window.api.speech.cancel_speech();
+        };
 
         // Se agrega compatibilidad con navegadores  
 
