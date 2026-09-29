@@ -10,7 +10,7 @@ Versión actual: 2.2
 
 ## Pre-requisitos
 
-![ci](https://img.shields.io/badge/ubuntu-20.04-red)
+![ci](https://img.shields.io/badge/ubuntu-24.04-red)
 
 Qt WebEngine 6 — https://doc.qt.io/qt-6/qtwebengine-index.html
 
