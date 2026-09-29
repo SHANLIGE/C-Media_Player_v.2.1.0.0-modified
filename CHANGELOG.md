@@ -8,27 +8,26 @@
 
 * **27-Abr-2026:**
 
-  * Mejoras en el puente JS y `WebView`.
-  * Ajustes en la lógica de impresión.
-  * Nueva conexión de eventos.
+  * Implementación de nueva comunicación en el puente `JSBridge` y `WebView`.
+  * Creación y ajustes en la lógica de impresión en el controlador `Universal Printer`.
+  * Nueva conexión de eventos en `Event.py`.
   * Correcciones en la comunicación del `JSBridge`.
 
 * **28-Abr-2026:**
 
-  * Adaptación y conexión del controlador Honeywell 3320g.
-  * Pruebas de comunicación con lector.
+  * Adaptación y conexión del controlador Honeywell 3320g a controlador `Lector Universal` .
+  * Pruebas de comunicación con lectores Honeywell 3320g, Magallan, Newland.
 
 * **30-Abr-2026:**
 
-  * Adaptación y depuración del Lector Universal.
-  * Configuración y pruebas del lector Newland para lectura de cédulas nuevas.
-  * Cambios de visualización gráfica para ARM64.
+  * Adaptación y depuración del controlador `Lector Universal`.
+  * Configuración y pruebas del controlador `Lector Universal` para lectura de cédulas nuevas.
 
 * **14-May-2026:**
 
-  * Correcciones del Lector Universal.
-  * Incorporación de lectura de cédulas nuevas.
-  * Mejoras en la interfaz de configuración.
+  * Correcciones de fallos de lectura en el controlador `Lector Universal` .
+  * Incorporación de lectura de cédulas de extrangería en el controlador `Lector Universal`.
+  * Mejoras en la interfaz de configuración en `GeneralTabFrame`.
 
 * **15-May-2026:**
 
@@ -36,28 +35,28 @@
 
 * **25-May-2026:**
 
-  * Correcciones en Universal Printer y Universal Reader.
-  * Ajustes en el tamaño del papel de impresión.
+  * Correcciones en los controladores `Universal Printer` y `Lector Universal`.
+  * Ajustes en el tamaño del papel de impresión en `Universal Printer`.
 
 * **26-May-2026:**
 
-  * Correcciones para lectura de cédulas nuevas.
-  * Correcciones para lectura de documentos de extranjería.
-  * Pruebas de impresión.
+  * Correcciones para lectura de cédulas nuevas en el controlador `Lector Universal`.
+  * Correcciones para lectura de documentos de extranjería en el controlador `Lector Universal`.
+  * Corrección de pruebas de impresión en el controlador `Universal Printer`.
 
 * **29-May-2026:**
 
-  * Corrección de impresión de códigos QR en tickets.
+  * Corrección de impresión de códigos QR en tickets en el controlador `Universal Printer`.
 
 * **01-Jun-2026:**
 
-  * Mejoras en la estructura del ticket.
-  * Correcciones de cortes de texto y saltos de línea.
+  * Mejoras en la estructura del ticket en el controlador `Universal Printer`.
+  * Correcciones de cortes de texto y saltos de línea en el controlador `Universal Printer`.
 
 * **17-Jun-2026:**
 
-  * Actualización de dependencias del proyecto.
-  * Incorporación de `PyInstaller` a los requerimientos.
+  * Actualización de dependencias del proyecto en `Requirements.txt`.
+  * Incorporación de PyInstaller a `Requirements.txt`
 
 * **23-Jun-2026:**
 
@@ -90,8 +89,8 @@
 
 * **31-Jul-2026:**
 
-  * Correcciones de comunicación del Bridge con servidores.
-  * Eliminación de redundancias.
+  * Correcciones de comunicación en `JSBridge` con servidores.
+  * Eliminación de redundancias en `JSBridge`.
   * Implementación de nueva `TitleBar`.
   * Actualización visual de `MainFrame`, `WebTabFrame`, `GeneralTabFrame`, `PrinterTabFrame` y `CodeReaderTabFrame`.
 
@@ -134,8 +133,7 @@
 ## ✨ Features
 
 * Comunicación entre `JSBridge`, `WebView` y servidores.
-* Universal Printer.
-* Universal Reader.
+* Controladores universales: `Universal Printer` y `Lector Universal`
 * Lectura de cédulas nuevas y documentos de extranjería.
 * Detección y gestión de pantallas.
 * Nueva barra de título (`TitleBar`).
