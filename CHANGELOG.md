@@ -1,4 +1,4 @@
-# Versión 2.2
+# Versión 2.2 
 
 **Versión actual X86_64:** ![version](https://img.shields.io/badge/C--Media_Player_Linux-2.2-orange?style=flat-square)
 
@@ -182,8 +182,8 @@
 
 ## Autores 🚀
 
-* @n.luque (Análisis, codificación, debug)
-* @shanlige (Desarrollo, integración y pruebas)
+* @n.luque (Desarrollo, integración análisis, codificación y debug)
+
 
 
 
