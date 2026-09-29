@@ -129,7 +129,7 @@
 
 ## ✨ Features
 
-* Comunicación entre `JSBridge`, `WebView` y servidores.
+* Comunicación entre `JSBridge`, `WebViewFrame` y servidores.
 * Controladores universales: `Universal Printer` y `Lector Universal`
 * Lectura de cédulas nuevas y documentos de extranjería.
 * Detección y gestión de múltiples pantallas.
