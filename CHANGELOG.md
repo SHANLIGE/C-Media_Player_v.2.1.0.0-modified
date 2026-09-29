@@ -66,26 +66,25 @@
 * **10-Jul-2026:**
 
   * Cambios en iconos y elementos visuales.
-  * Ajustes relacionados con controladores y aceptación de certificados.
+  * Ajustes relacionados con controladores y aceptación de certificados en `WebTabFrame`.
 
 * **14-Jul-2026:**
 
-  * Correcciones del ticket en Universal Printer.
-  * Correcciones de posiciones de bytes y logo en impresión.
-  * Corrección del corte de impresión.
+  * Correcciones del ticket en el controlador `Universal Printer`.
+  * Correcciones de posiciones de bytes y logo en impresión en el controlador `Universal Printer`.
+  * Corrección del corte de impresión en el controlador `Universal Printer`.
 
 * **17-Jul-2026:**
 
-  * Actualización del puente para comunicación con servidores.
-  * Correcciones en tamaños de impresión.
-  * Eliminación de alertas de prueba en `JSBridge`.
+  * Actualización del puente `JSBridge` para comunicación con servidores.
+  * Correcciones en tamaños de impresión en el controlador `Universal Printer`.
 
 * **22-Jul-2026:**
 
   * Correcciones de importaciones relativas.
   * Correcciones en generación de logs.
-  * Ajustes de tamaño del ticket y corte.
-  * Correcciones de impresión en líneas específicas.
+  * Ajustes de tamaño del ticket y corte en el controlador `Universal Printer`.
+  * Correcciones del tamaño de las lineas de impresión en el controlador `Universal Printer`.
 
 * **31-Jul-2026:**
 
@@ -98,35 +97,33 @@
 
   * Actualización de interfaces.
   * Mejoras de interacción y navegación.
-  * Implementación de detección de pantalla.
+  * Implementación de detección de multiples pantallas en `WebTabFrame` y `WebViewFrame`.
 
 * **12-Ago-2026:**
 
-  * Correcciones en lectores de códigos.
-  * Correcciones en `Event.py` y Universal CodeReader.
-  * Implementación de acciones `closeApp`.
+  * Correcciones de lectura intermitente en el controlador `Lector Universal`.
+  * Correcciones en los controladores `Event.py` y `Lector Universal`.
+  * Implementación de acciones en `closeApp`.
 
 * **19-Ago-2026:**
 
   * Refactorización de `WebTabFrame`.
-  * Correcciones en `MainFrame`.
-  * Corrección del archivo `.spec` utilizado para generar el instalador.
+  * Correcciones de visualización en `MainFrame`.
+  * Cambios en el archivo `C-Media_Player.spec` utilizado para generar el instalador.
 
 * **20-21-Ago-2026:**
 
-  * Correcciones relacionadas con pantallas.
+  * Correcciones configuración en la detección de pantallas en `WebTabFrame` y `WebViewFrame`.
   * Correcciones de gestión y rotación de pantalla.
 
 * **01-Sep-2026:**
 
-  * Correcciones de audio.
-  * Correcciones relacionadas con audio y pantalla táctil.
+  * Correcciones en la detección de pantallas táctiles.
 
 * **04-Sep-2026:**
 
-  * Correcciones en `SpeechSynthesis`.
-  * Mejoras en la comunicación y manejo del audio.
-  * Refactorización de la gestión de la cola de síntesis de voz.
+  * Mejoras en la comunicación y manejo del audio del controlador `SpeechSynthesis`.
+  * Refactorización de la gestión de la cola de síntesis de voz del controlador `SpeechSynthesis`.
 
 ---
 
@@ -135,14 +132,13 @@
 * Comunicación entre `JSBridge`, `WebView` y servidores.
 * Controladores universales: `Universal Printer` y `Lector Universal`
 * Lectura de cédulas nuevas y documentos de extranjería.
-* Detección y gestión de pantallas.
-* Nueva barra de título (`TitleBar`).
-* Acciones `closeApp`.
+* Detección y gestión de múltiples pantallas.
+* Nueva barra de título `TitleBar`.
+* Acciones `closeApp` (Cierre de la App manejado por servidor).
 * Generación de instaladores mediante `PyInstaller`.
-* Sistema de síntesis de voz (`SpeechSynthesis`).
-* Gestión de cola de síntesis de voz.
-* Reproducción y manejo de audio.
-* Mejoras en la interfaz gráfica.
+* Mejoras de calidad del sistema de síntesis de voz (`SpeechSynthesis`).
+* Gestión de cola de síntesis de voz en múltiples pantallas.
+* Mejoras de IU y UX en la interfaz gráfica.
 * Optimización de la estructura interna del proyecto.
 
 ---
@@ -155,13 +151,12 @@
 | 🔴 Crítico   | Correcciones de lectura de cédulas y documentos de extranjería           |
 | 🔴 Crítico   | Correcciones de impresión y corte de tickets                             |
 | 🟠 Tolerante | Correcciones de Universal Printer                                        |
-| 🟠 Tolerante | Correcciones del Universal Reader                                        |
+| 🟠 Tolerante | Correcciones del Lector Universal                                        |
 | 🟠 Tolerante | Correcciones de generación de logs                                       |
-| 🟠 Tolerante | Correcciones de gestión de pantallas                                     |
 | 🟠 Tolerante | Correcciones relacionadas con audio                                      |
 | 🟢 Mejora    | Refactorización de `WebTabFrame`                                         |
 | 🟢 Mejora    | Nueva `TitleBar`                                                         |
-| 🟢 Mejora    | Detección de pantallas                                                   |
+| 🟢 Mejora    | Detección de multiples pantallas                                         |
 | 🟢 Mejora    | Acciones `closeApp`                                                      |
 | 🟢 Mejora    | Refactorización de `SpeechSynthesis`                                     |
 | 🟢 Mejora    | Gestión de la cola de síntesis de voz                                    |
