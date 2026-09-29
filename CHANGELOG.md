@@ -175,7 +175,9 @@
 
 ## Autores 🚀
 
-* @n.luque (Desarrollo, integración, análisis, codificación y debug)
+* @n.luque (Desarrollo, codificaciòn, Debug)
+* @v.hernadez (Implementación de hardware)
+* @w.ramos (Pruebas de hardware)
 
 
 
