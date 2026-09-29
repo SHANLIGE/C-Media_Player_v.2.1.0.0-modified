@@ -182,7 +182,7 @@
 
 ## Autores 🚀
 
-* @n.luque (Desarrollo, integración análisis, codificación y debug)
+* @n.luque (Desarrollo, integración, análisis, codificación y debug)
 
 
 
