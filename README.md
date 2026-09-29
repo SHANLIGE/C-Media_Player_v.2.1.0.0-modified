@@ -6,7 +6,12 @@ El propósito del desarrollo en el presente repositorio es ofrecer un reproducto
 
 Versión actual: 2.2
 
+
+## Documentos complementarios 
 ---
+| Documento | |
+|:---|:---|
+| Manual Actualizado de Instalación y Configuración de C-Media Player ARM64 (Versión 1.0) | `Docs/Manual Actualizado de Instalación y Configuración de C-Media Player ARM64 (Versión 1.0).docx` |
 
 ## Pre-requisitos
 
@@ -17,7 +22,53 @@ Qt WebEngine 6 — https://doc.qt.io/qt-6/qtwebengine-index.html
 
 ![ci](https://img.shields.io/badge/Python-3.10-3670A0?logo=python&logoColor=ffdd54)
 
+## Información técnica ​
 ---
+### Lenguajes
+
+- Python 3.10
+- JavaScript (Qt WebEngine / C-Media Web)
+- Bash (scripts de entorno)
+
+### Arquitectura
+
+- Aplicación de escritorio Qt (PySide6)
+- Navegador embebido con Qt WebEngine
+- Módulo de periféricos (impresora tèrmica, lector de códigos)
+
+### Patrones usados
+
+- POO
+- SOLID
+- Abstracción (Interfaces)
+- Arquitectura por capas
+
+## Otros conceptos
+
+- Hilos de fondo (daemon threads)
+- Detección automática de arquitectura (`platform.machine()`)
+- Monitoreo de display en tiempo real
+- Variables de entorno condicionales por plataforma
+- Empaquetado con PyInstaller (`C-Media_Player.spec`)
+
+
+## Archivos de configuración
+
+La app espera estos archivos en `~/.config/Ciel/C-Media_Player/`. Son indispensables para que corra el programa.
+
+```
+~/.config/Ciel/C-Media_Player/
+├── configs/
+│   └── config.json          -- Configuración general de la app
+├── Media/
+│   ├── SplashScreen.png     -- Pantalla de carga
+│   └── Logo-CMedia_lx.png  -- Ícono de la ventana
+└── logs/
+    └── log.log              -- Archivo de logs
+```
+
+Si "Ruta" en config.json empieza con $, se trata como variable de entorno. Ejemplo: `$HOME/pantallas.json`
+
 
 ## Instrucciones para ejecutar en debug
 
@@ -39,28 +90,6 @@ Ejecutar Player:
 python3 -m App.App.py
 ```
 
----
-
-## Archivos de configuración
-
-La app espera estos archivos en `~/.config/Ciel/C-Media_Player/`. Son indispensables para que corra el programa.
-
-```
-~/.config/Ciel/C-Media_Player/
-├── configs/
-│   └── config.json          -- Configuración general de la app
-├── Media/
-│   ├── SplashScreen.png     -- Pantalla de carga
-│   └── Logo-CMedia_lx.png  -- Ícono de la ventana
-└── logs/
-    └── log.log              -- Archivo de logs
-```
-
-Si "Ruta" en config.json empieza con $, se trata como variable de entorno. Ejemplo: `$HOME/pantallas.json`
-
----
-
-
 
 ## Empaquetar con PyInstaller
 
@@ -70,7 +99,7 @@ Se usa un archivo .spec para controlar el empaquetado:
 pyinstaller CMediaPlayer.spec
 ```
 
-El .spec incluye estos hidden imports que PyInstaller no detecta automáticamente:
+**Importaciones requeridas (no detectados automáticamente):**
 
 ```
 serial, serial.serialposix, serial.serialutil, serial.tools.list_ports,
@@ -79,27 +108,8 @@ PySide6.QtWebEngineWidgets, cryptography.fernet, cv2, netifaces, psutil, gtts
 ```
 
 
-## Información técnica
-
-- SOLID
-- POO
-- Abstracción (Interfaces)
-
----
-
-## Documentos complementarios
-
-| Documento | |
-|:---|:---|
-| Manual de Configuración Certificado SSL | Docs/Configurar certificado autofirmado - Player Linux.docx |
-
-`: Ubicarse en la carpeta para ejecutar la aplicación
-- Ejecutar configuración `App.py -- debug --config`
-- Ejecutar Player  `App.py -- debug`
-
-
 ## Visuals 
-
+---
 <img width="799" height="497" alt="Captura desde 2026-07-10 07-58-35" src="https://github.com/user-attachments/assets/bceb86b9-676e-4247-8c9d-3a3e04522827" />
 <img width="796" height="500" alt="Captura desde 2026-09-01 09-58-23" src="https://github.com/user-attachments/assets/f0d6150c-99ee-40e5-80e2-b62c3c0da5e5" />
 <img width="799" height="497" alt="Captura desde 2026-07-10 07-59-25" src="https://github.com/user-attachments/assets/4b073895-7cd0-4231-838b-6c0147105cdc" />
@@ -108,7 +118,7 @@ PySide6.QtWebEngineWidgets, cryptography.fernet, cv2, netifaces, psutil, gtts
 ## Autores 🖌️
 
 - **Andrés Mauricio Gómez** (Actualización)
-- **@n.luque** (Desarrollo, codificaciòn, Bugs)
+- **@n.luque** (Desarrollo, codificación, Bugs)
 - **@v.hernadez** (Implementación de hardware)
 - **@w.ramos** (Pruebas de hardware)
 
