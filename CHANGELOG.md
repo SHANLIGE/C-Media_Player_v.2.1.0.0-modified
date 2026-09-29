@@ -1,7 +1,6 @@
-# Versión 2.2 (Actualizada) (29-Sep-2026)
+# Versión 2.2
 
 **Versión actual X86_64:** ![version](https://img.shields.io/badge/C--Media_Player_Linux-2.2-orange?style=flat-square)
-**Versión actual ARM64:** ![version](https://img.shields.io/badge/C--Media_Player_Linux-1.0-orange?style=flat-square)
 
 ---
 
@@ -9,10 +8,10 @@
 
 * **27-Abr-2026:**
 
-  * Mejoras en el puente JS y WebView.
+  * Mejoras en el puente JS y `WebView`.
   * Ajustes en la lógica de impresión.
   * Nueva conexión de eventos.
-  * Actualización de la conexión JSBridge.
+  * Correcciones en la comunicación del `JSBridge`.
 
 * **28-Abr-2026:**
 
@@ -21,24 +20,15 @@
 
 * **30-Abr-2026:**
 
-  * Creación y depuración del Driver de Impresora Universal.
-  * Creación y depuración del Driver de Lector Universal.
-  * Compilación gráfica para arquitectura ARM64.
-  * Configuración del lector Newland para lectura de cédulas nuevas.
-
-* **11-May-2026:**
-
-  * Implementación de configuración de terminales.
-  * Configuración de lectores.
-  * Integración de cambios de arquitectura ARM64.
+  * Adaptación y depuración del Lector Universal.
+  * Configuración y pruebas del lector Newland para lectura de cédulas nuevas.
+  * Cambios de visualización gráfica para ARM64.
 
 * **14-May-2026:**
 
-  * Correcciones y estabilización del Lector Universal.
-  * Correcciones y estabilización de la Impresora Universal.
-  * Configuración y conexión de terminales.
-  * Implementación de configuración de la barra de navegación.
-  * Persistencia de configuraciones de terminales.
+  * Correcciones del Lector Universal.
+  * Incorporación de lectura de cédulas nuevas.
+  * Mejoras en la interfaz de configuración.
 
 * **15-May-2026:**
 
@@ -47,8 +37,13 @@
 * **25-May-2026:**
 
   * Correcciones en Universal Printer y Universal Reader.
-  * Mejoras en tamaño de papel.
-  * Correcciones para lectura de cédulas nuevas y documentos de extranjería.
+  * Ajustes en el tamaño del papel de impresión.
+
+* **26-May-2026:**
+
+  * Correcciones para lectura de cédulas nuevas.
+  * Correcciones para lectura de documentos de extranjería.
+  * Pruebas de impresión.
 
 * **29-May-2026:**
 
@@ -56,168 +51,124 @@
 
 * **01-Jun-2026:**
 
-  * Mejoras en estructura del ticket.
+  * Mejoras en la estructura del ticket.
   * Correcciones de cortes de texto y saltos de línea.
 
 * **17-Jun-2026:**
 
   * Actualización de dependencias del proyecto.
-  * Incorporación de PyInstaller a los requerimientos.
+  * Incorporación de `PyInstaller` a los requerimientos.
 
 * **23-Jun-2026:**
 
   * Limpieza y reorganización de la arquitectura.
   * Ajustes para preparación de producción.
 
-* **25-Jun-2026:**
-
-  * Actualización de requerimientos y configuración de `.gitignore`.
-
-* **01-Jul-2026:**
-
-  * Actualizaciones visuales de la interfaz.
-
-* **08-Jul-2026:**
-
-  * Mejoras visuales de la interfaz.
-  * Actualización de botones y elementos de UI.
-
 * **10-Jul-2026:**
 
-  * Actualización de iconos.
-  * Correcciones relacionadas con controladores.
-  * Ajustes para aceptación de certificados.
+  * Cambios en iconos y elementos visuales.
+  * Ajustes relacionados con controladores y aceptación de certificados.
 
 * **14-Jul-2026:**
 
-  * Correcciones del sistema de impresión universal.
-  * Ajustes de posiciones y logos en impresión.
+  * Correcciones del ticket en Universal Printer.
+  * Correcciones de posiciones de bytes y logo en impresión.
   * Corrección del corte de impresión.
 
 * **17-Jul-2026:**
 
-  * Actualización del puente de comunicación con servidores.
-  * Eliminación de alertas de prueba en JSBridge.
-  * Mejoras en tamaños de impresión.
+  * Actualización del puente para comunicación con servidores.
+  * Correcciones en tamaños de impresión.
+  * Eliminación de alertas de prueba en `JSBridge`.
 
 * **22-Jul-2026:**
 
   * Correcciones de importaciones relativas.
-  * Corrección de generación de logs.
-  * Correcciones en tamaño del ticket y corte.
-  * Ajustes de variaciones horizontales y líneas de impresión.
-
-* **24-Jul-2026:**
-
-  * Corrección de impresión en arquitectura ARM64.
+  * Correcciones en generación de logs.
+  * Ajustes de tamaño del ticket y corte.
+  * Correcciones de impresión en líneas específicas.
 
 * **31-Jul-2026:**
 
-  * Correcciones en comunicación del Bridge con los servidores.
+  * Correcciones de comunicación del Bridge con servidores.
   * Eliminación de redundancias.
-  * Nueva barra de título (`TitleBar`).
-  * Actualización visual de `MainFrame`.
-  * Actualización visual de `TerminalTabFrame`.
-  * Actualización visual de `CodeReaderTabFrame`.
-  * Actualización visual de `PrinterTabFrame`.
-  * Actualización visual de `GeneralTabFrame`.
-  * Actualización visual de `WebTabFrame`.
+  * Implementación de nueva `TitleBar`.
+  * Actualización visual de `MainFrame`, `WebTabFrame`, `GeneralTabFrame`, `PrinterTabFrame` y `CodeReaderTabFrame`.
 
 * **10-Ago-2026:**
 
-  * Cambios en interfaces.
-  * Incorporación de botón para agregar URLs.
-  * Implementación de scroll.
-  * Detección de pantallas.
+  * Actualización de interfaces.
+  * Mejoras de interacción y navegación.
+  * Implementación de detección de pantalla.
 
 * **12-Ago-2026:**
 
   * Correcciones en lectores de códigos.
-  * Correcciones relacionadas con terminales.
-  * Correcciones en `Event.py` y `UniversalCodeReader`.
-  * Eliminación de labels innecesarios.
-  * Incorporación de acciones `closeApp`.
+  * Correcciones en `Event.py` y Universal CodeReader.
+  * Implementación de acciones `closeApp`.
 
 * **19-Ago-2026:**
 
-  * Refactorización de `WebTabFrame` para mejorar distribución y funcionalidad.
+  * Refactorización de `WebTabFrame`.
   * Correcciones en `MainFrame`.
-  * Correcciones del archivo `.spec` para generación del instalador.
-  * Eliminación de labels de ayuda innecesarios.
+  * Corrección del archivo `.spec` utilizado para generar el instalador.
 
-* **20-Ago-2026:**
+* **20-21-Ago-2026:**
 
-  * Correcciones relacionadas con múltiples pantallas.
-
-* **21-Ago-2026:**
-
-  * Correcciones de pantallas y rotación.
+  * Correcciones relacionadas con pantallas.
+  * Correcciones de gestión y rotación de pantalla.
 
 * **01-Sep-2026:**
 
-  * Correcciones relacionadas con audio.
-  * Correcciones de interacción entre audio y pantalla táctil.
+  * Correcciones de audio.
+  * Correcciones relacionadas con audio y pantalla táctil.
 
 * **04-Sep-2026:**
 
-  * Correcciones en comunicación con el sistema de Speech.
-  * Correcciones adicionales relacionadas con Speech.
+  * Correcciones en `SpeechSynthesis`.
+  * Mejoras en la comunicación y manejo del audio.
+  * Refactorización de la gestión de la cola de síntesis de voz.
 
 ---
 
 ## ✨ Features
 
-* Conexión universal con servidores adaptados a Linux.
-* Driver Universal para impresoras.
-* Driver Universal para lectores.
-* Compatibilidad con arquitectura ARM64 para tablets.
-* Configuración de terminales PNP para arquitectura ARM64.
-* Configuración de URLs para terminales desde el contenedor Web.
-* Configuración y persistencia de terminales.
-* Sistema de drivers universales para dispositivos de entrada y salida.
-* Detección de pantallas.
-* Soporte para múltiples pantallas.
-* Manejo de rotación de pantalla.
-* Scroll en interfaces.
-* Gestión de URLs desde la interfaz.
+* Comunicación entre `JSBridge`, `WebView` y servidores.
+* Universal Printer.
+* Universal Reader.
+* Lectura de cédulas nuevas y documentos de extranjería.
+* Detección y gestión de pantallas.
+* Nueva barra de título (`TitleBar`).
 * Acciones `closeApp`.
-* Nueva barra de título personalizada.
-* Actualización visual de las principales interfaces del sistema.
-* Mejoras en comunicación entre JSBridge, WebView y servidores.
-* Mejoras en generación y manejo de logs.
-* Generación de paquetes mediante PyInstaller.
-* Optimización del sistema para entornos Linux de bajos recursos.
-* Soporte y mejoras para impresión en arquitectura ARM64.
+* Generación de instaladores mediante `PyInstaller`.
+* Sistema de síntesis de voz (`SpeechSynthesis`).
+* Gestión de cola de síntesis de voz.
+* Reproducción y manejo de audio.
+* Mejoras en la interfaz gráfica.
+* Optimización de la estructura interna del proyecto.
 
 ---
 
 ## 🔧 Fix
 
-| Tipo         | Descripción                                                           |
-| ------------ | --------------------------------------------------------------------- |
-| 🔴 Crítico   | Correcciones de comunicación entre JSBridge, WebView y servidores     |
-| 🔴 Crítico   | Correcciones de comunicación con Speech                               |
-| 🔴 Crítico   | Correcciones de lectura de cédulas nuevas y documentos de extranjería |
-| 🔴 Crítico   | Correcciones de controladores de lectores                             |
-| 🔴 Crítico   | Correcciones de impresión en ARM64                                    |
-| 🟠 Tolerante | Correcciones de Universal Printer y Universal Reader                  |
-| 🟠 Tolerante | Correcciones de tamaño de papel y tickets                             |
-| 🟠 Tolerante | Correcciones de corte y saltos de línea en impresión                  |
-| 🟠 Tolerante | Corrección de impresión de códigos QR                                 |
-| 🟠 Tolerante | Correcciones de comunicación con pantallas                            |
-| 🟠 Tolerante | Correcciones de rotación de pantalla                                  |
-| 🟠 Tolerante | Correcciones relacionadas con audio y pantalla táctil                 |
-| 🟠 Tolerante | Correcciones en `MainFrame` y `WebTabFrame`                           |
-| 🟠 Tolerante | Correcciones de importaciones y generación de logs                    |
-| 🟢 Mejora    | Detección y gestión de pantallas                                      |
-| 🟢 Mejora    | Nuevas acciones `closeApp`                                            |
-| 🟢 Mejora    | Nueva barra de título                                                 |
-| 🟢 Mejora    | Actualización visual de interfaces                                    |
-| 🟢 Mejora    | Mejoras en configuración de terminales                                |
-| 🟢 Mejora    | Mejoras en Bridge y comunicación con servidores                       |
-| 🟢 Mejora    | Refactorización de `WebTabFrame`                                      |
-| 🟢 Mejora    | Actualización de dependencias y PyInstaller                           |
-| 🟢 Mejora    | Mejoras de compatibilidad ARM64                                       |
+| Tipo         | Descripción                                                              |
+| ------------ | ------------------------------------------------------------------------ |
+| 🔴 Crítico   | Correcciones en la comunicación entre `JSBridge`, `WebView` y servidores |
+| 🔴 Crítico   | Correcciones de lectura de cédulas y documentos de extranjería           |
+| 🔴 Crítico   | Correcciones de impresión y corte de tickets                             |
+| 🟠 Tolerante | Correcciones de Universal Printer                                        |
+| 🟠 Tolerante | Correcciones del Universal Reader                                        |
+| 🟠 Tolerante | Correcciones de generación de logs                                       |
+| 🟠 Tolerante | Correcciones de gestión de pantallas                                     |
+| 🟠 Tolerante | Correcciones relacionadas con audio                                      |
+| 🟢 Mejora    | Refactorización de `WebTabFrame`                                         |
+| 🟢 Mejora    | Nueva `TitleBar`                                                         |
+| 🟢 Mejora    | Detección de pantallas                                                   |
+| 🟢 Mejora    | Acciones `closeApp`                                                      |
+| 🟢 Mejora    | Refactorización de `SpeechSynthesis`                                     |
+| 🟢 Mejora    | Gestión de la cola de síntesis de voz                                    |
+| 🟢 Mejora    | Mejoras en manejo y reproducción de audio                                |
+| 🟢 Mejora    | Incorporación de `PyInstaller`                                           |
 
 [ 🟢 Mejora ] [ 🟠 Tolerante ] [ 🔴 Crítico ]
 
@@ -225,13 +176,15 @@
 
 ## 📄 Documentación
 
-* Manual Actualizado de Instalación y Configuración de C-Media Player ARM64 (Versión 1.0).
+* Manual Actualizado de Instalación y Configuración de C-Media Player (Versión 2.2).
 
 ---
 
 ## Autores 🚀
 
 * @n.luque (Análisis, codificación, debug)
-* @v.hernandez (Análisis, pruebas de hardware)
+* @shanlige (Desarrollo, integración y pruebas)
+
+
 
  
