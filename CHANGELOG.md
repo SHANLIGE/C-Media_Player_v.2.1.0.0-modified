@@ -175,7 +175,7 @@
 
 ## Autores 🚀
 
-* @n.luque (Desarrollo, codificaciòn, Debug)
+* @n.luque (Desarrollo, codificación, Debug)
 * @v.hernadez (Implementación de hardware)
 * @w.ramos (Pruebas de hardware)
 
