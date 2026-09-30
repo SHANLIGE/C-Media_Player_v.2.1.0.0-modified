@@ -11,11 +11,12 @@ Versión actual: 2.2
 ---
 | Documento | |
 |:---|:---|
-| Manual Actualizado de Instalación y Configuración de C-Media Player ARM64 (Versión 1.0) | `Docs/Manual Actualizado de Instalación y Configuración de C-Media Player ARM64 (Versión 1.0).docx` |
+| Manual Actualizado de Instalación y Configuración de C-Media Player (Versión 2.2) | `Docs/Manual Actualizado de Instalación y Configuración de C-Media Player (Versión 2.2).docx` |
 
 ## Pre-requisitos
 
 ![ci](https://img.shields.io/badge/ubuntu-24.04-red)
+
 
 Qt WebEngine 6 — https://doc.qt.io/qt-6/qtwebengine-index.html
 
